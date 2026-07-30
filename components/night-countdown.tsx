@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 function partsUntil(targetMs: number, nowMs: number) {
@@ -44,6 +45,7 @@ export function NightCountdown({
   targetMs: number;
   className?: string;
 }) {
+  const t = useTranslations("nights");
   const now = useSyncExternalStore(
     subscribeCountdown,
     getCountdownSnapshot,
@@ -53,7 +55,7 @@ export function NightCountdown({
   if (now === 0) {
     return (
       <p className={cn("text-sm text-muted-foreground", className)}>
-        Counting down…
+        {t("countingDown")}
       </p>
     );
   }
@@ -63,18 +65,19 @@ export function NightCountdown({
   if (done) {
     return (
       <p className={cn("text-sm font-medium text-primary", className)}>
-        It is night time
+        {t("isNightTime")}
       </p>
     );
   }
 
+  const daysPart = days > 0 ? `${days}d ` : "";
+
   return (
     <p className={cn("text-sm text-muted-foreground", className)}>
       <span className="font-medium text-foreground tabular-nums">
-        {days > 0 ? `${days}d ` : ""}
-        {hours}h {minutes}m
+        {t("countdownFormat", { daysPart, hours, minutes })}
       </span>{" "}
-      until showtime
+      {t("untilShowtime")}
     </p>
   );
 }

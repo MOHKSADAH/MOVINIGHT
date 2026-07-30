@@ -1,8 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -10,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandLogo } from "@/components/brand-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { Link, usePathname } from "@/i18n/navigation";
 import {
   List,
   Eye,
@@ -30,14 +31,14 @@ import { cn } from "@/lib/utils";
 import { AUTH_DISABLED } from "@/lib/auth-flags";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/watchlist", label: "Watchlist", icon: List },
-  { href: "/watched", label: "Watched", icon: Eye },
-  { href: "/food", label: "Food", icon: Utensils },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/collections", label: "Collections", icon: BookMarked },
-  { href: "/hall-of-fame", label: "Hall of Fame", icon: Trophy },
-  { href: "/members", label: "Crew", icon: Clapperboard },
+  { href: "/", labelKey: "dashboard" as const, icon: LayoutDashboard },
+  { href: "/watchlist", labelKey: "watchlist" as const, icon: List },
+  { href: "/watched", labelKey: "watched" as const, icon: Eye },
+  { href: "/food", labelKey: "food" as const, icon: Utensils },
+  { href: "/calendar", labelKey: "calendar" as const, icon: CalendarDays },
+  { href: "/collections", labelKey: "collections" as const, icon: BookMarked },
+  { href: "/hall-of-fame", labelKey: "hallOfFame" as const, icon: Trophy },
+  { href: "/members", labelKey: "crew" as const, icon: Clapperboard },
 ];
 
 const SIDEBAR_KEY = "sidebarCollapsed";
@@ -85,9 +86,10 @@ function getServerSidebarSnapshot() {
 }
 
 function LoadingScreen() {
+  const t = useTranslations("nav");
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 border-r border-sidebar-border bg-sidebar shadow-sm">
+      <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 border-e border-sidebar-border bg-sidebar shadow-sm">
         <div className="flex h-24 items-center justify-center px-5 border-b border-sidebar-border">
           <BrandLogo className="h-16" />
         </div>
@@ -112,10 +114,10 @@ function LoadingScreen() {
           </div>
         </div>
       </aside>
-      <main className="flex-1 md:ml-64 flex items-center justify-center">
+      <main className="flex-1 md:ms-64 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <BrandLogo className="h-12 opacity-70 animate-pulse" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
         </div>
       </main>
     </div>
@@ -123,12 +125,13 @@ function LoadingScreen() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const pathname = usePathname();
   const { signOut } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.getCurrentUser);
 
-  // Hydration-safe: server snapshots match SSR; client reads DOM/localStorage.
   const isDark = useSyncExternalStore(
     subscribeTheme,
     getThemeSnapshot,
@@ -152,22 +155,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   };
 
-  // Unauthenticated users are redirected to /login in middleware — do not
-  // router.push() in useEffect here (that flashes the app shell first).
   if (!AUTH_DISABLED && (isLoading || !isAuthenticated)) {
     return <LoadingScreen />;
   }
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed inset-y-0 border-r border-sidebar-border bg-sidebar z-10 shadow-sm transition-[width] duration-200",
+          "hidden md:flex flex-col fixed inset-y-0 border-e border-sidebar-border bg-sidebar z-10 shadow-sm transition-[width] duration-200",
           collapsed ? "w-16" : "w-64",
         )}
       >
-        {/* Logo + collapse */}
         <div
           className={cn(
             "flex h-24 items-center border-b border-sidebar-border",
@@ -185,8 +184,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             size="sm"
             className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground shrink-0"
             onClick={toggleSidebar}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={
+              collapsed ? t("expandSidebar") : t("collapseSidebar")
+            }
+            title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
           >
             {collapsed ? (
               <PanelLeft className="h-4 w-4" />
@@ -196,9 +197,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
 
-        {/* Nav */}
         <nav className={cn("flex-1 py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
           {navItems.map((item) => {
+            const label = t(item.labelKey);
             const isActive =
               item.href === "/"
                 ? pathname === "/"
@@ -207,7 +208,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                title={item.label}
+                title={label}
                 className={cn(
                   "flex items-center rounded-md text-sm transition-colors",
                   collapsed
@@ -219,13 +220,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && <span>{label}</span>}
               </Link>
             );
           })}
         </nav>
 
-        {/* User */}
         <div
           className={cn(
             "border-t border-sidebar-border space-y-1",
@@ -235,7 +235,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {user && (
             <Link
               href={`/profile/${user._id}`}
-              title={user.name ?? "My Profile"}
+              title={user.name ?? t("myProfile")}
               className={cn(
                 "flex items-center rounded-md transition-colors",
                 collapsed ? "justify-center p-2" : "gap-3 px-2 py-2",
@@ -254,14 +254,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-sm font-medium text-sidebar-foreground truncate">
-                      {user.name ?? "My Profile"}
+                      {user.name ?? t("myProfile")}
                     </p>
                     {(user as { isOwner?: boolean }).isOwner && (
                       <Crown className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    View profile
+                    {t("viewProfile")}
                   </p>
                 </div>
               )}
@@ -277,7 +277,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => signOut()}
               >
                 <LogOut className="h-4 w-4" />
-                Sign out
+                {t("signOut")}
               </Button>
             )}
             {collapsed && (
@@ -287,8 +287,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 size="sm"
                 className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => signOut()}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={t("signOut")}
+                title={t("signOut")}
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -299,8 +299,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               size="sm"
               className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
               onClick={toggleTheme}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Light mode" : "Dark mode"}
+              aria-label={
+                isDark ? t("switchToLightMode") : t("switchToDarkMode")
+              }
+              title={isDark ? t("lightMode") : t("darkMode")}
             >
               {isDark ? (
                 <Sun className="h-4 w-4" />
@@ -308,14 +310,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
+            <LanguageSwitcher compact className={collapsed ? "" : "ms-auto"} />
           </div>
         </div>
       </aside>
 
-      {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 h-14 border-b border-border bg-background flex items-center justify-between px-4 z-10">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <BrandLogo className="h-8" priority />
+          <LanguageSwitcher compact />
         </div>
         {user && (
           <Link href={`/profile/${user._id}`}>
@@ -329,9 +332,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
-      {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 inset-x-0 h-16 border-t border-border bg-background flex items-center justify-around z-10">
         {navItems.slice(0, 5).map((item) => {
+          const label = t(item.labelKey);
           const isActive =
             item.href === "/"
               ? pathname === "/"
@@ -346,23 +349,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span className="text-[10px]">{item.label}</span>
+              <span className="text-[10px]">{label}</span>
             </Link>
           );
         })}
       </div>
 
-      {/* Main content */}
       <main
         className={cn(
           "flex-1 pb-16 md:pb-0 pt-14 md:pt-0 flex flex-col transition-[margin] duration-200",
-          collapsed ? "md:ml-16" : "md:ml-64",
+          collapsed ? "md:ms-16" : "md:ms-64",
         )}
       >
         <div className="flex-1">{children}</div>
         <footer className="py-5 text-center border-t border-border">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Mohammad Al-Sadah
+            {tCommon("copyright", { year: new Date().getFullYear() })}
           </p>
         </footer>
       </main>

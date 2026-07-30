@@ -66,7 +66,7 @@ export function StarRating({
         );
       })}
       {value > 0 && (
-        <span className="ml-1.5 text-sm font-medium text-muted-foreground">
+        <span className="ms-1.5 text-sm font-medium text-muted-foreground">
           {value}/{max}
         </span>
       )}

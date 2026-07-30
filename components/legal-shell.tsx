@@ -1,4 +1,7 @@
-import Link from "next/link";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { SITE_CONTACT_EMAIL, SITE_CONTACT_MAILTO } from "@/lib/site";
 
@@ -11,6 +14,9 @@ export function LegalShell({
   updated: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("legal");
+  const tCommon = useTranslations("common");
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
@@ -21,7 +27,7 @@ export function LegalShell({
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Last updated {updated}
+              {tCommon("lastUpdated", { date: updated })}
             </p>
           </div>
         </header>
@@ -32,16 +38,16 @@ export function LegalShell({
 
         <footer className="mt-12 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-6 text-xs text-muted-foreground">
           <Link href="/privacy" className="hover:text-foreground transition-colors">
-            Privacy Policy
+            {t("privacyPolicy")}
           </Link>
           <Link href="/terms" className="hover:text-foreground transition-colors">
-            Terms of Service
+            {t("termsOfService")}
           </Link>
           <Link href="/about" className="hover:text-foreground transition-colors">
-            About
+            {t("about")}
           </Link>
           <Link href="/login" className="hover:text-foreground transition-colors">
-            Sign in
+            {t("signIn")}
           </Link>
           <a
             href={SITE_CONTACT_MAILTO}
