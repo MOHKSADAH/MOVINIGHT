@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/pagination";
 import { Plus, Search, Film } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 
 const PAGE_SIZE = 12;
 
@@ -267,25 +268,20 @@ export default function WatchlistPage() {
               </Pagination>
             )}
           </>
+        ) : filter ? (
+          <EmptyState
+            icon={Search}
+            title="No movies match your filter"
+            description="Try a different title or clear the search."
+          />
         ) : (
-          <div className="text-center py-16 text-muted-foreground">
-            <Film className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            {filter ? (
-              <p className="text-sm">No movies match your filter</p>
-            ) : (
-              <>
-                <p className="text-sm font-medium">Watchlist is empty</p>
-                <p className="text-xs mt-1">Add movies to watch with your crew</p>
-                <Button
-                  className="mt-4 gap-2"
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add your first movie
-                </Button>
-              </>
-            )}
-          </div>
+          <EmptyState
+            icon={Film}
+            title="Watchlist is empty"
+            description="Add movies to watch with your crew — upvotes push the best picks to the top."
+            actionLabel="Add your first movie"
+            onAction={() => setSearchOpen(true)}
+          />
         )}
       </div>
 

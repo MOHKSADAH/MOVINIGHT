@@ -107,12 +107,15 @@ function WrapUpDialog({
           {pickedMovieId && (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Your rating</label>
+                <p className="text-sm font-medium">Your rating</p>
                 <StarRating value={score} onChange={setScore} size="md" max={10} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Note (optional)</label>
+                <label className="text-sm font-medium" htmlFor="wrap-up-note">
+                  Note (optional)
+                </label>
                 <input
+                  id="wrap-up-note"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="What did you think?"
                   value={note}

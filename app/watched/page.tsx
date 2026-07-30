@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, Search, Plus, X } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { Id } from "@/convex/_generated/dataModel";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
@@ -197,10 +198,13 @@ function LogMovieDialog({
         <div className="space-y-4 pt-2">
           {!selectedMovie ? (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Movie</label>
+              <label className="text-sm font-medium" htmlFor="log-movie-search">
+                Movie
+              </label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="log-movie-search"
                   placeholder="Search for a movie..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -282,13 +286,14 @@ function LogMovieDialog({
 
           {pastNights.length > 0 && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">
+              <label className="text-sm font-medium" htmlFor="log-movie-night">
                 Movie Night{" "}
                 <span className="text-muted-foreground font-normal">
                   (optional)
                 </span>
               </label>
               <select
+                id="log-movie-night"
                 value={nightId}
                 onChange={(e) => handleNightSelect(e.target.value)}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -309,10 +314,10 @@ function LogMovieDialog({
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">
+            <p className="text-sm font-medium">
               Date Watched{" "}
               <span className="text-muted-foreground font-normal">(optional)</span>
-            </label>
+            </p>
             <div className="flex justify-center border border-border rounded-md py-2">
               <DayPicker
                 mode="single"
@@ -329,20 +334,21 @@ function LogMovieDialog({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Your Rating</label>
+            <p className="text-sm font-medium">Your Rating</p>
             <div className="flex justify-center">
               <StarRating value={score} onChange={setScore} size="lg" max={10} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">
+            <label className="text-sm font-medium" htmlFor="log-movie-note">
               Note{" "}
               <span className="text-muted-foreground font-normal">
                 (optional)
               </span>
             </label>
             <Input
+              id="log-movie-note"
               placeholder="What did you think?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -413,8 +419,11 @@ function RatingDialog({
             <StarRating value={score} onChange={setScore} size="lg" max={10} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Note (optional)</label>
+            <label className="text-sm font-medium" htmlFor="rate-entry-note">
+              Note (optional)
+            </label>
             <Input
+              id="rate-entry-note"
               placeholder="What did you think?"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -592,28 +601,20 @@ export default function WatchedPage() {
               </Pagination>
             )}
           </>
+        ) : filter ? (
+          <EmptyState
+            icon={Search}
+            title="No movies match your search"
+            description="Try another title or clear the search box."
+          />
         ) : (
-          <div className="text-center py-16 text-muted-foreground">
-            <Eye className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            {filter ? (
-              <p className="text-sm">No movies match your search</p>
-            ) : (
-              <>
-                <p className="text-sm font-medium">No movies watched yet</p>
-                <p className="text-xs mt-1">
-                  Log past movies or watch during a Movie Night
-                </p>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="mt-1 h-auto p-0 text-xs"
-                  onClick={() => setLogOpen(true)}
-                >
-                  Log your first movie
-                </Button>
-              </>
-            )}
-          </div>
+          <EmptyState
+            icon={Eye}
+            title="No movies watched yet"
+            description="Log past movies or wrap a Movie Night so they show up in your history."
+            actionLabel="Log your first movie"
+            onAction={() => setLogOpen(true)}
+          />
         )}
       </div>
 

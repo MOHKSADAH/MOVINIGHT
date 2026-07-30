@@ -33,16 +33,31 @@ export const addWatchedEntry = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const entryId = await ctx.db.insert("watched_entries", {
-      ...args,
-      ratings: [],
-    });
-
-    // Auto-remove from shared watchlist if present
     const watchlistEntry = await ctx.db
       .query("watchlist_entries")
       .withIndex("by_movie", (q) => q.eq("movieId", args.movieId))
       .first();
+
+    const suggestedBy = watchlistEntry
+      ? [
+          ...new Set([
+            watchlistEntry.addedBy,
+            ...watchlistEntry.upvotes,
+            ...(args.pickedBy ? [args.pickedBy] : []),
+          ]),
+        ]
+      : args.pickedBy
+        ? [args.pickedBy]
+        : undefined;
+
+    const entryId = await ctx.db.insert("watched_entries", {
+      movieId: args.movieId,
+      nightId: args.nightId,
+      pickedBy: args.pickedBy,
+      suggestedBy,
+      watchedAt: args.watchedAt,
+      ratings: [],
+    });
 
     if (watchlistEntry) {
       await ctx.db.delete(watchlistEntry._id);

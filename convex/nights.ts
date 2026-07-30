@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 export const getNights = query({
   args: {},
@@ -62,7 +63,7 @@ export const createNight = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    return await ctx.db.insert("movie_nights", {
+    const nightId = await ctx.db.insert("movie_nights", {
       title,
       date,
       hostId: userId,
@@ -70,6 +71,12 @@ export const createNight = mutation({
       attendees: [userId],
       candidates: [],
     });
+
+    await ctx.scheduler.runAfter(0, internal.nightsReminders.scheduleReminder, {
+      nightId,
+    });
+
+    return nightId;
   },
 });
 
@@ -121,6 +128,20 @@ export const updateNightStatus = mutation({
   handler: async (ctx, { nightId, status }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const night = await ctx.db.get(nightId);
+    if (!night) throw new Error("Night not found");
+
+    if (status === "done" && night.reminderJobId) {
+      try {
+        await ctx.scheduler.cancel(night.reminderJobId);
+      } catch {
+        // Job may already have run
+      }
+      await ctx.db.patch(nightId, { status, reminderJobId: undefined });
+      return;
+    }
+
     await ctx.db.patch(nightId, { status });
   },
 });
