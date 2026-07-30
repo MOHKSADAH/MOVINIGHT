@@ -1,0 +1,23 @@
+{
+  "title": "Calendar",
+  "subtitle": "Schedule and manage movie nights",
+  "addToCalendar": "Add to calendar",
+  "newNight": "New Night",
+  "upcomingNights": "Upcoming Nights",
+  "pastNights": "Past Nights",
+  "noUpcoming": "No upcoming nights",
+  "scheduleOneNow": "Schedule one now",
+  "statusUpcoming": "Upcoming",
+  "statusTonight": "Tonight",
+  "statusDone": "Done",
+  "createDialogTitle": "New Movie Night",
+  "titleLabel": "Title",
+  "titlePlaceholder": "e.g. Friday Night Films",
+  "dateLabel": "Date",
+  "createNight": "Create night",
+  "toastTitleDateRequired": "Please enter a title and select a date",
+  "toastNightCreated": "Movie night created",
+  "toastCreateFailed": "Failed to create movie night",
+  "toastNoExport": "No nights to export",
+  "toastCalendarDownloaded": "Calendar file downloaded"
+}

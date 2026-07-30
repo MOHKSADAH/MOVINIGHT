@@ -1,0 +1,20 @@
+{
+  "dashboard": "لوحة التحكم",
+  "watchlist": "قائمة المشاهدة",
+  "watched": "ما شُوهد",
+  "food": "الطعام",
+  "calendar": "التقويم",
+  "collections": "المجموعات",
+  "hallOfFame": "قاعة المشاهير",
+  "crew": "الطاقم",
+  "expandSidebar": "توسيع الشريط الجانبي",
+  "collapseSidebar": "طي الشريط الجانبي",
+  "myProfile": "ملفي",
+  "viewProfile": "عرض الملف",
+  "signOut": "تسجيل الخروج",
+  "switchToLightMode": "التبديل إلى الوضع الفاتح",
+  "switchToDarkMode": "التبديل إلى الوضع الداكن",
+  "lightMode": "الوضع الفاتح",
+  "darkMode": "الوضع الداكن",
+  "loading": "جاري التحميل..."
+}

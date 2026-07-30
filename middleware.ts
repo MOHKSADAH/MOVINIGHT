@@ -1,11 +1,14 @@
 import {
   convexAuthNextjsMiddleware,
-  createRouteMatcher,
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
+import createMiddleware from "next-intl/middleware";
 import { AUTH_DISABLED } from "@/lib/auth-flags";
+import { routing } from "@/i18n/routing";
 
-const isPublicPage = createRouteMatcher([
+const handleI18nRouting = createMiddleware(routing);
+
+const PUBLIC_PATHS = new Set([
   "/login",
   "/register",
   "/privacy",
@@ -13,24 +16,58 @@ const isPublicPage = createRouteMatcher([
   "/about",
 ]);
 
+function stripLocale(pathname: string): string {
+  for (const locale of routing.locales) {
+    if (locale === routing.defaultLocale) continue;
+    if (pathname === `/${locale}`) return "/";
+    if (pathname.startsWith(`/${locale}/`)) {
+      return pathname.slice(`/${locale}`.length) || "/";
+    }
+  }
+  return pathname;
+}
+
+function localeFromPath(pathname: string): string {
+  const segment = pathname.split("/")[1];
+  if (
+    segment &&
+    (routing.locales as readonly string[]).includes(segment) &&
+    segment !== routing.defaultLocale
+  ) {
+    return segment;
+  }
+  return routing.defaultLocale;
+}
+
+function withLocale(path: string, locale: string): string {
+  if (locale === routing.defaultLocale) return path;
+  if (path === "/") return `/${locale}`;
+  return `/${locale}${path}`;
+}
+
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-  if (AUTH_DISABLED) return;
+  if (AUTH_DISABLED) {
+    return handleI18nRouting(request);
+  }
 
+  const pathname = request.nextUrl.pathname;
+  const pathWithoutLocale = stripLocale(pathname);
+  const locale = localeFromPath(pathname);
+  const isAuthEntry =
+    pathWithoutLocale === "/login" || pathWithoutLocale === "/register";
   const isAuthenticated = await convexAuth.isAuthenticated();
-  const path = request.nextUrl.pathname;
-  const isAuthEntry = path === "/login" || path === "/register";
 
-  // Authenticated users should not see login/register — redirect server-side
-  // instead of a client useEffect (avoids a flash of the wrong page).
   if (isAuthEntry && isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/");
+    return nextjsMiddlewareRedirect(request, withLocale("/", locale));
   }
 
-  if (!isPublicPage(request) && !isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/login");
+  if (!PUBLIC_PATHS.has(pathWithoutLocale) && !isAuthenticated) {
+    return nextjsMiddlewareRedirect(request, withLocale("/login", locale));
   }
+
+  return handleI18nRouting(request);
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"],
 };

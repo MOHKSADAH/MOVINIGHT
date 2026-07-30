@@ -1,0 +1,23 @@
+{
+  "title": "التقويم",
+  "subtitle": "جدولة وإدارة ليالي الأفلام",
+  "addToCalendar": "إضافة إلى التقويم",
+  "newNight": "ليلة جديدة",
+  "upcomingNights": "الليالي القادمة",
+  "pastNights": "الليالي السابقة",
+  "noUpcoming": "لا توجد ليالي قادمة",
+  "scheduleOneNow": "جدول واحدة الآن",
+  "statusUpcoming": "قادمة",
+  "statusTonight": "الليلة",
+  "statusDone": "منتهية",
+  "createDialogTitle": "ليلة فيلم جديدة",
+  "titleLabel": "العنوان",
+  "titlePlaceholder": "مثال: أفلام ليلة الجمعة",
+  "dateLabel": "التاريخ",
+  "createNight": "إنشاء ليلة",
+  "toastTitleDateRequired": "يرجى إدخال عنوان واختيار تاريخ",
+  "toastNightCreated": "تم إنشاء ليلة الفيلم",
+  "toastCreateFailed": "تعذّر إنشاء ليلة الفيلم",
+  "toastNoExport": "لا توجد ليالي للتصدير",
+  "toastCalendarDownloaded": "تم تنزيل ملف التقويم"
+}

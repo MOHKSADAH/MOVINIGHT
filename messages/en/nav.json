@@ -1,0 +1,20 @@
+{
+  "dashboard": "Dashboard",
+  "watchlist": "Watchlist",
+  "watched": "Watched",
+  "food": "Food",
+  "calendar": "Calendar",
+  "collections": "Collections",
+  "hallOfFame": "Hall of Fame",
+  "crew": "Crew",
+  "expandSidebar": "Expand sidebar",
+  "collapseSidebar": "Collapse sidebar",
+  "myProfile": "My Profile",
+  "viewProfile": "View profile",
+  "signOut": "Sign out",
+  "switchToLightMode": "Switch to light mode",
+  "switchToDarkMode": "Switch to dark mode",
+  "lightMode": "Light mode",
+  "darkMode": "Dark mode",
+  "loading": "Loading..."
+}
