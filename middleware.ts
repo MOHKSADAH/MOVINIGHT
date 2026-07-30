@@ -69,5 +69,10 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"],
+  // Exclude most /api routes from i18n, but /api/auth MUST hit middleware —
+  // Convex Auth proxies signIn/signOut there. Without it, OTP posts get a Next 404.
+  matcher: [
+    "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
+    "/api/auth",
+  ],
 };
