@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import {
   List,
   Eye,
@@ -128,9 +128,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
   const pathname = usePathname();
+  const router = useRouter();
   const { signOut } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.getCurrentUser);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/login");
+  };
 
   const isDark = useSyncExternalStore(
     subscribeTheme,
@@ -274,7 +280,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="sm"
                 className="flex-1 justify-start gap-2 text-muted-foreground hover:text-foreground h-9 px-2"
-                onClick={() => signOut()}
+                onClick={() => void handleSignOut()}
               >
                 <LogOut className="h-4 w-4" />
                 {t("signOut")}
@@ -286,7 +292,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-                onClick={() => signOut()}
+                onClick={() => void handleSignOut()}
                 aria-label={t("signOut")}
                 title={t("signOut")}
               >

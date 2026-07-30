@@ -25,23 +25,12 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { useTranslations } from "next-intl";
 import { getLocalizedMovieTitle } from "@/lib/locale";
+import { getPageItems } from "@/lib/pagination";
 import { useLocale } from "next-intl";
 
 const PAGE_SIZE = 12;
 
 type SortOption = "votes" | "recent";
-
-function getPageItems(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i);
-  const items: (number | "ellipsis")[] = [0];
-  if (current > 2) items.push("ellipsis");
-  const start = Math.max(1, current - 1);
-  const end = Math.min(total - 2, current + 1);
-  for (let i = start; i <= end; i++) items.push(i);
-  if (current < total - 3) items.push("ellipsis");
-  items.push(total - 1);
-  return items;
-}
 
 type WatchlistMovie = NonNullable<ReturnType<typeof useQuery<typeof api.watchlist.getWatchlist>>>[number]["movie"];
 
@@ -245,19 +234,19 @@ export default function WatchlistPage() {
                     />
                   </PaginationItem>
 
-                  {getPageItems(page, totalPages).map((item, idx) =>
-                    item === "ellipsis" ? (
-                      <PaginationItem key={`ellipsis-${idx}`}>
+                  {getPageItems(page, totalPages).map((item) =>
+                    item.kind === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${item.id}`}>
                         <PaginationEllipsis />
                       </PaginationItem>
                     ) : (
-                      <PaginationItem key={item}>
+                      <PaginationItem key={item.page}>
                         <PaginationLink
-                          isActive={page === item}
-                          onClick={() => setPage(item)}
+                          isActive={page === item.page}
+                          onClick={() => setPage(item.page)}
                           className="cursor-pointer"
                         >
-                          {item + 1}
+                          {item.page + 1}
                         </PaginationLink>
                       </PaginationItem>
                     ),

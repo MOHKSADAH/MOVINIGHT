@@ -118,6 +118,7 @@ export default function CollectionDetailPage() {
       <div className="p-6 max-w-5xl mx-auto">
         {/* Back */}
         <button
+          type="button"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           onClick={() => router.push("/collections")}
         >
@@ -223,6 +224,7 @@ export default function CollectionDetailPage() {
                     )}
                     {collection.isOwner && (
                       <button
+                        type="button"
                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
                         onClick={(e) => {
                           e.stopPropagation();

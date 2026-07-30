@@ -85,6 +85,7 @@ export function WatchlistCard({
         )}
         {canRemove && onRemove && (
           <button
+            type="button"
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
             onClick={onRemove}
           >
@@ -212,6 +213,7 @@ export function WatchedGridCard({
         )}
         {onDelete && (
           <button
+            type="button"
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
             onClick={(e) => {
               e.stopPropagation();

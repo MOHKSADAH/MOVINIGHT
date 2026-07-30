@@ -31,9 +31,11 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations, useLocale } from "next-intl";
-import { getLocalizedMovieTitle, tmdbLanguageFromLocale } from "@/lib/locale";
+import { getLocalizedMovieTitle, getDateFnsLocale, tmdbLanguageFromLocale } from "@/lib/locale";
 import { fetchTmdbMovieUpsertPayload } from "@/lib/tmdb-movie-upsert";
+import { getPageItems } from "@/lib/pagination";
 import { DayPicker } from "react-day-picker";
+import { format } from "date-fns";
 import "react-day-picker/style.css";
 
 const PAGE_SIZE = 12;
@@ -71,18 +73,6 @@ type TmdbDetail = TmdbResult & {
   runtime?: number;
 };
 
-function getPageItems(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i);
-  const items: (number | "ellipsis")[] = [0];
-  if (current > 2) items.push("ellipsis");
-  const start = Math.max(1, current - 1);
-  const end = Math.min(total - 2, current + 1);
-  for (let i = start; i <= end; i++) items.push(i);
-  if (current < total - 3) items.push("ellipsis");
-  items.push(total - 1);
-  return items;
-}
-
 function LogMovieDialog({
   open,
   onClose,
@@ -104,6 +94,7 @@ function LogMovieDialog({
   const [nightId, setNightId] = useState<string>("none");
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [today, setToday] = useState<Date | null>(null);
 
   const upsertMovie = useMutation(api.movies.upsertMovie);
   const addWatchedEntry = useMutation(api.watched.addWatchedEntry);
@@ -113,32 +104,49 @@ function LogMovieDialog({
   const pastNights = nights?.filter((n) => n.status === "done") ?? [];
 
   useEffect(() => {
+    setToday(new Date());
+  }, []);
+
+  useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setSearching(false);
       return;
     }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
         const res = await fetch(
           `/api/tmdb/search?query=${encodeURIComponent(query)}&language=${encodeURIComponent(tmdbLanguage)}`,
+          { signal: controller.signal },
         );
-        const data = await res.json();
+        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+        const data = (await res.json()) as { results?: TmdbResult[] };
+        if (controller.signal.aborted) return;
         setResults(data.results?.slice(0, 5) ?? []);
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setResults([]);
       } finally {
         setSearching(false);
       }
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, tmdbLanguage]);
 
   const handleSelectMovie = async (result: TmdbResult) => {
     const res = await fetch(
       `/api/tmdb/movie/${result.id}?language=${encodeURIComponent(tmdbLanguage)}`,
     );
-    const data = await res.json();
+    if (!res.ok) {
+      toast.error(t("toastSelectMovieRating"));
+      return;
+    }
+    const data = (await res.json()) as TmdbDetail;
     setSelectedMovie(data);
     setResults([]);
     setQuery("");
@@ -297,10 +305,8 @@ function LogMovieDialog({
                 {pastNights.map((night) => (
                   <option key={night._id} value={night._id}>
                     {night.title} ·{" "}
-                    {new Date(night.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
+                    {format(new Date(night.date), "MMM d, yyyy", {
+                      locale: getDateFnsLocale(locale),
                     })}
                   </option>
                 ))}
@@ -320,7 +326,7 @@ function LogMovieDialog({
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                disabled={{ after: new Date() }}
+                disabled={today ? { after: today } : undefined}
               />
             </div>
             {!date && (
@@ -575,19 +581,19 @@ export default function WatchedPage() {
                     />
                   </PaginationItem>
 
-                  {getPageItems(page, totalPages).map((item, idx) =>
-                    item === "ellipsis" ? (
-                      <PaginationItem key={`ellipsis-${idx}`}>
+                  {getPageItems(page, totalPages).map((item) =>
+                    item.kind === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${item.id}`}>
                         <PaginationEllipsis />
                       </PaginationItem>
                     ) : (
-                      <PaginationItem key={item}>
+                      <PaginationItem key={item.page}>
                         <PaginationLink
-                          isActive={page === item}
-                          onClick={() => setPage(item)}
+                          isActive={page === item.page}
+                          onClick={() => setPage(item.page)}
                           className="cursor-pointer"
                         >
-                          {item + 1}
+                          {item.page + 1}
                         </PaginationLink>
                       </PaginationItem>
                     ),

@@ -13,11 +13,13 @@ export const getCollections = query({
       collections
         .sort((a, b) => b.createdAt - a.createdAt)
         .map(async (c) => {
-          const owner = await ctx.db.get(c.ownerId);
-          const entries = await ctx.db
-            .query("collection_movies")
-            .withIndex("by_collection", (q) => q.eq("collectionId", c._id))
-            .collect();
+          const [owner, entries] = await Promise.all([
+            ctx.db.get(c.ownerId),
+            ctx.db
+              .query("collection_movies")
+              .withIndex("by_collection", (q) => q.eq("collectionId", c._id))
+              .collect(),
+          ]);
           const firstThree = entries.slice(0, 3);
           const posters = (
             await Promise.all(firstThree.map((e) => ctx.db.get(e.movieId)))
@@ -45,11 +47,13 @@ export const getCollection = query({
     const collection = await ctx.db.get(collectionId);
     if (!collection) return null;
 
-    const owner = await ctx.db.get(collection.ownerId);
-    const entries = await ctx.db
-      .query("collection_movies")
-      .withIndex("by_collection", (q) => q.eq("collectionId", collectionId))
-      .collect();
+    const [owner, entries] = await Promise.all([
+      ctx.db.get(collection.ownerId),
+      ctx.db
+        .query("collection_movies")
+        .withIndex("by_collection", (q) => q.eq("collectionId", collectionId))
+        .collect(),
+    ]);
 
     const movies = (
       await Promise.all(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
@@ -153,7 +153,12 @@ function CreateNightDialog({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [today, setToday] = useState<Date | null>(null);
   const createNight = useMutation(api.nights.createNight);
+
+  useEffect(() => {
+    setToday(new Date());
+  }, []);
 
   const handleCreate = async () => {
     if (!title.trim() || !date) {
@@ -200,7 +205,7 @@ function CreateNightDialog({
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                disabled={{ before: new Date() }}
+                disabled={today ? { before: today } : undefined}
               />
             </div>
           </div>
@@ -376,9 +381,9 @@ export default function CalendarPage() {
                                 </div>
                                 {night.candidatePosters && night.candidatePosters.length > 0 && (
                                   <div className="flex gap-1.5 mt-2 ps-11">
-                                    {night.candidatePosters.map((c, i) => (
+                                    {night.candidatePosters.map((c) => (
                                       <div
-                                        key={i}
+                                        key={`${c.poster}:${c.title}`}
                                         className="relative w-8 h-12 rounded overflow-hidden bg-muted shrink-0"
                                       >
                                         <Image

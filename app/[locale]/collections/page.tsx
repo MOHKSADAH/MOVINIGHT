@@ -96,9 +96,9 @@ export default function CollectionsPage() {
                         <Film className="h-8 w-8 text-muted-foreground/40" />
                       </div>
                     ) : (
-                      col.posters.map((poster, i) => (
+                      col.posters.map((poster) => (
                         <div
-                          key={i}
+                          key={`${col._id}:${poster}`}
                           className="relative flex-1 overflow-hidden"
                           style={{ flexBasis: `${100 / col.posters.length}%` }}
                         >

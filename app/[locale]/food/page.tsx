@@ -195,6 +195,7 @@ export default function FoodPage() {
         <div className="flex gap-2 flex-wrap mb-5">
           {CATEGORY_SLUGS.map((cat) => (
             <button
+              type="button"
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={cn(

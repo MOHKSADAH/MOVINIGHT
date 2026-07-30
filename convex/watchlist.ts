@@ -17,8 +17,10 @@ export const getWatchlist = query({
       entries
         .filter((entry) => !watchedMovieIds.has(entry.movieId))
         .map(async (entry) => {
-          const movie = await ctx.db.get(entry.movieId);
-          const addedBy = await ctx.db.get(entry.addedBy);
+          const [movie, addedBy] = await Promise.all([
+            ctx.db.get(entry.movieId),
+            ctx.db.get(entry.addedBy),
+          ]);
           return { ...entry, movie, addedBy };
         }),
     );

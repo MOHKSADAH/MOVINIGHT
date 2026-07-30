@@ -123,6 +123,7 @@ export function TMDBSearch({
 
     setSelectedGenre(null);
     const controller = new AbortController();
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -130,17 +131,21 @@ export function TMDBSearch({
           `/api/tmdb/search?query=${encodeURIComponent(trimmedQuery)}&language=${encodeURIComponent(tmdbLanguage)}`,
           { signal: controller.signal },
         );
-        const data = await res.json();
+        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+        const data = (await res.json()) as { results?: TmdbMovie[] };
+        if (cancelled) return;
         setResults(data.results ?? []);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        if (cancelled) return;
         toast.error(t("toastSearchFailed"));
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        setLoading(false);
       }
     }, 400);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       controller.abort();
     };
@@ -151,6 +156,7 @@ export function TMDBSearch({
     if (!open || trimmedQuery || !selectedGenre) return;
 
     const controller = new AbortController();
+    let cancelled = false;
     setLoading(true);
 
     const shuffle = shuffleNonce > 0;
@@ -161,28 +167,28 @@ export function TMDBSearch({
     void (async () => {
       try {
         const res = await fetch(url, { signal: controller.signal });
-        const data = await res.json();
+        if (!res.ok) throw new Error(`Discover failed (${res.status})`);
+        const data = (await res.json()) as { results?: TmdbMovie[] };
+        if (cancelled) return;
         setResults(data.results ?? []);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        if (cancelled) return;
         toast.error(t("toastSuggestionsFailed"));
         setResults([]);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        setLoading(false);
       }
     })();
 
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [open, trimmedQuery, selectedGenre, shuffleNonce, tmdbLanguage, t]);
 
-  // Idle empty state
-  useEffect(() => {
-    if (!open) return;
-    if (!trimmedQuery && !selectedGenre) {
-      setResults([]);
-      setLoading(false);
-    }
-  }, [open, trimmedQuery, selectedGenre]);
+  const visibleResults =
+    open && (trimmedQuery || selectedGenre) ? results : [];
 
   const handleSelectGenre = (genre: TmdbGenre) => {
     setQuery("");
@@ -299,11 +305,12 @@ export function TMDBSearch({
         ? t("addToCollection")
         : tNights("searchDialogTitle");
 
-  const showEmptySearch = !loading && results.length === 0 && !!trimmedQuery;
+  const showEmptySearch =
+    !loading && visibleResults.length === 0 && !!trimmedQuery;
   const showIdleHint =
-    !loading && results.length === 0 && !trimmedQuery && !selectedGenre;
+    !loading && visibleResults.length === 0 && !trimmedQuery && !selectedGenre;
   const showEmptyGenre =
-    !loading && !!selectedGenre && !trimmedQuery && results.length === 0;
+    !loading && !!selectedGenre && !trimmedQuery && visibleResults.length === 0;
 
   return (
     <>
@@ -403,7 +410,7 @@ export function TMDBSearch({
             )}
 
             {!loading &&
-              results.map((movie) => {
+              visibleResults.map((movie) => {
                 const isAdded = added.has(movie.id);
                 const isAdding = adding === movie.id;
                 const year = movie.release_date

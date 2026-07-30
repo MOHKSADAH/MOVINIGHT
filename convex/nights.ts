@@ -33,16 +33,15 @@ export const getNight = query({
     const night = await ctx.db.get(nightId);
     if (!night) return null;
 
-    const candidateMovies = await Promise.all(
-      night.candidates.map((id) => ctx.db.get(id)),
-    );
-    const pickedMovieData = night.pickedMovie
-      ? await ctx.db.get(night.pickedMovie)
-      : null;
-    const host = await ctx.db.get(night.hostId);
-    const attendeeUsers = await Promise.all(
-      night.attendees.map((id) => ctx.db.get(id)),
-    );
+    const [candidateMovies, pickedMovieData, host, attendeeUsers] =
+      await Promise.all([
+        Promise.all(night.candidates.map((id) => ctx.db.get(id))),
+        night.pickedMovie
+          ? ctx.db.get(night.pickedMovie)
+          : Promise.resolve(null),
+        ctx.db.get(night.hostId),
+        Promise.all(night.attendees.map((id) => ctx.db.get(id))),
+      ]);
 
     return {
       ...night,
