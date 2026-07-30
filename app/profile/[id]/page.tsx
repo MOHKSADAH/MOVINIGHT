@@ -352,15 +352,18 @@ export default function ProfilePage({
 
       {/* Edit Profile Sheet */}
       <Sheet open={editOpen} onOpenChange={(o) => !o && setEditOpen(false)}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-md gap-0 overflow-y-auto p-0"
+        >
+          <SheetHeader className="gap-1.5 space-y-0 border-b border-border p-6 pr-14 text-left">
             <SheetTitle>Edit Profile</SheetTitle>
             <SheetDescription>
               Update your display name, avatar, and bio.
             </SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-6 pt-6">
+          <div className="space-y-6 px-6 py-6">
             {/* Avatar preview + URL */}
             <div className="space-y-3">
               <div className="flex justify-center">
@@ -413,26 +416,23 @@ export default function ProfilePage({
                 {editBio.length}/200
               </p>
             </div>
+          </div>
 
-            <Separator />
-
-            {/* Footer actions */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setEditOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
+          <div className="mt-auto flex gap-2 border-t border-border px-6 py-4">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setEditOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

@@ -38,6 +38,60 @@ export const listUsers = query({
   },
 });
 
+/** Crew roster with per-member watch/rating/night stats for the members page. */
+export const listCrew = query({
+  args: {},
+  handler: async (ctx) => {
+    const callerId = await getAuthUserId(ctx);
+    if (!callerId) return [];
+
+    const [users, watched, watchlist, nights] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("watched_entries").collect(),
+      ctx.db.query("watchlist_entries").collect(),
+      ctx.db.query("movie_nights").collect(),
+    ]);
+
+    return users
+      .map((user) => {
+        const ratings = watched.flatMap((e) =>
+          e.ratings.filter((r) => r.userId === user._id),
+        );
+        const avgRating =
+          ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length
+            : null;
+        const suggestions = watchlist.filter((e) => e.addedBy === user._id)
+          .length;
+        const nightsHosted = nights.filter((n) => n.hostId === user._id).length;
+        const nightsAttended = nights.filter((n) =>
+          n.attendees.includes(user._id),
+        ).length;
+
+        return {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          avatar: user.avatar,
+          bio: user.bio,
+          isOwner: isAppOwner(user.email),
+          isYou: user._id === callerId,
+          ratingsGiven: ratings.length,
+          avgRating,
+          suggestions,
+          nightsHosted,
+          nightsAttended,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isOwner !== b.isOwner) return a.isOwner ? -1 : 1;
+        if (a.isYou !== b.isYou) return a.isYou ? -1 : 1;
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      });
+  },
+});
+
 export const updateUser = mutation({
   args: {
     name: v.optional(v.string()),

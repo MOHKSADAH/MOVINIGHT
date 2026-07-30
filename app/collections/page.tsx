@@ -18,6 +18,7 @@ import { BookMarked, Plus, Film } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import { EmptyState } from "@/components/empty-state";
 
 export default function CollectionsPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -73,13 +74,13 @@ export default function CollectionsPage() {
             ))}
           </div>
         ) : collections.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <BookMarked className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium">No collections yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create one to curate movies for any occasion
-            </p>
-          </div>
+          <EmptyState
+            icon={BookMarked}
+            title="No collections yet"
+            description="Create one to curate movies for any occasion — horror nights, comfort rewatches, whatever fits."
+            actionLabel="New collection"
+            onAction={() => setCreateOpen(true)}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {collections.map((col) => (
@@ -143,8 +144,11 @@ export default function CollectionsPage() {
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium" htmlFor="collection-name">
+                Name
+              </label>
               <Input
+                id="collection-name"
                 placeholder="Horror Night, 90s Classics..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -153,10 +157,14 @@ export default function CollectionsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">
+              <label
+                className="text-sm font-medium text-muted-foreground"
+                htmlFor="collection-description"
+              >
                 Description (optional)
               </label>
               <Input
+                id="collection-description"
                 placeholder="What's this collection about?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

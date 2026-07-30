@@ -15,13 +15,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, Plus, Film, ChevronRight } from "lucide-react";
+import { CalendarDays, Plus, Film, ChevronRight, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { DayPicker, type DayButtonProps } from "react-day-picker";
 import "react-day-picker/style.css";
 import { cn } from "@/lib/utils";
+import { buildNightsIcs, downloadIcs } from "@/lib/ics";
 
 type CalendarNight = {
   _id: string;
@@ -170,8 +171,11 @@ function CreateNightDialog({
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Title</label>
+            <label className="text-sm font-medium" htmlFor="night-title">
+              Title
+            </label>
             <Input
+              id="night-title"
               placeholder="e.g. Friday Night Films"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -179,7 +183,7 @@ function CreateNightDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Date</label>
+            <p className="text-sm font-medium">Date</p>
             <div className="flex justify-center border border-border rounded-md py-2">
               <DayPicker
                 mode="single"
@@ -233,22 +237,56 @@ export default function CalendarPage() {
   const upcomingNights = nights?.filter((n) => n.status !== "done");
   const pastNights = nights?.filter((n) => n.status === "done");
 
+  const handleDownloadIcs = () => {
+    if (!nights || nights.length === 0) {
+      toast.error("No nights to export");
+      return;
+    }
+    const ics = buildNightsIcs(
+      nights.map((n) => ({
+        _id: n._id,
+        title: n.title,
+        date: n.date,
+        status: n.status,
+      })),
+      window.location.origin,
+    );
+    downloadIcs("movie-nights.ics", ics);
+    toast.success("Calendar file downloaded");
+  };
+
   return (
     <AppShell>
       <NightDatesCtx.Provider value={nightDates}>
         <div className="p-6 max-w-4xl mx-auto space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Schedule and manage movie nights
               </p>
             </div>
-            <Button onClick={() => setCreateOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Night
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={handleDownloadIcs}
+                disabled={!nights || nights.length === 0}
+              >
+                <Download className="h-4 w-4" />
+                Add to calendar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Night
+              </Button>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-[auto_1fr] gap-6">
@@ -272,7 +310,7 @@ export default function CalendarPage() {
               {/* Upcoming */}
               <div>
                 <h2 className="font-semibold mb-3">Upcoming Nights</h2>
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   {nights === undefined ? (
                     [...Array(3)].map((_, i) => (
                       <Skeleton key={i} className="h-20 rounded-lg" />
@@ -283,8 +321,8 @@ export default function CalendarPage() {
                       .map((night) => {
                         const config = STATUS_CONFIG[night.status];
                         return (
-                          <Link key={night._id} href={`/night/${night._id}`}>
-                            <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
+                          <Link key={night._id} href={`/night/${night._id}`} className="block">
+                            <Card className="border border-border shadow-sm hover:bg-accent/30 transition-colors cursor-pointer">
                               <CardContent className="p-4">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-3">
@@ -376,16 +414,20 @@ export default function CalendarPage() {
                   <h2 className="font-semibold mb-3 text-muted-foreground">
                     Past Nights
                   </h2>
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     {pastNights
                       .sort((a, b) => b.date - a.date)
                       .slice(0, 5)
                       .map((night) => (
-                        <Link key={night._id} href={`/night/${night._id}`}>
-                          <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
-                            <CardContent className="p-3 flex items-center gap-3">
+                        <Link
+                          key={night._id}
+                          href={`/night/${night._id}`}
+                          className="block"
+                        >
+                          <Card className="border border-border bg-card shadow-sm hover:bg-accent/30 transition-colors cursor-pointer">
+                            <CardContent className="p-3.5 flex items-center gap-3">
                               {/* Movie poster thumbnail */}
-                              <div className="relative shrink-0 w-10 h-14 rounded overflow-hidden bg-muted">
+                              <div className="relative shrink-0 w-10 h-14 rounded overflow-hidden bg-muted ring-1 ring-border">
                                 {night.pickedMovieData ? (
                                   <Image
                                     src={night.pickedMovieData.poster}

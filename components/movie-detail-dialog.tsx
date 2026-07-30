@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Star, CalendarDays } from "lucide-react";
 
 interface Movie {
-  _id: string;
+  _id?: string;
   title: string;
   poster: string;
   backdrop?: string;
@@ -25,6 +25,10 @@ interface MovieDetailDialogProps {
   onClose: () => void;
   onMarkWatched?: () => void;
   onRate?: () => void;
+  /** Extra primary action (e.g. Add to watchlist from search preview). */
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
+  primaryActionDisabled?: boolean;
 }
 
 export function MovieDetailDialog({
@@ -33,6 +37,9 @@ export function MovieDetailDialog({
   onClose,
   onMarkWatched,
   onRate,
+  primaryActionLabel,
+  onPrimaryAction,
+  primaryActionDisabled,
 }: MovieDetailDialogProps) {
   if (!movie) return null;
 
@@ -129,6 +136,15 @@ export function MovieDetailDialog({
 
             {/* Actions */}
             <div className="flex gap-2 pt-2 border-t border-border">
+              {onPrimaryAction && primaryActionLabel && (
+                <Button
+                  className="flex-1"
+                  onClick={onPrimaryAction}
+                  disabled={primaryActionDisabled}
+                >
+                  {primaryActionLabel}
+                </Button>
+              )}
               {onMarkWatched && (
                 <Button className="flex-1" onClick={onMarkWatched}>
                   Mark as Watched

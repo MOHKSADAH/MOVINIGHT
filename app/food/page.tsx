@@ -19,6 +19,7 @@ import {
 import { Utensils, Plus, ThumbsUp, Trash2, Shuffle, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/empty-state";
 
 const CATEGORIES = [
   "All",
@@ -189,17 +190,17 @@ export default function FoodPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Utensils className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium">
-              {activeCategory === "All"
+          <EmptyState
+            icon={Utensils}
+            title={
+              activeCategory === "All"
                 ? "No restaurants yet"
-                : `No ${activeCategory} places yet`}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add your favourite spots
-            </p>
-          </div>
+                : `No ${activeCategory} places yet`
+            }
+            description="Add your favourite spots so the crew can vote before movie night."
+            actionLabel="Add restaurant"
+            onAction={() => setAddOpen(true)}
+          />
         ) : (
           <div className="space-y-2">
             {filtered.map((r) => (
@@ -272,8 +273,11 @@ export default function FoodPage() {
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-3">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium" htmlFor="restaurant-name">
+                Name
+              </label>
               <Input
+                id="restaurant-name"
                 placeholder="Restaurant name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -282,8 +286,11 @@ export default function FoodPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Category</label>
+              <label className="text-sm font-medium" htmlFor="restaurant-category">
+                Category
+              </label>
               <select
+                id="restaurant-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 required
@@ -299,10 +306,14 @@ export default function FoodPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">
+                <label
+                  className="text-sm font-medium text-muted-foreground"
+                  htmlFor="restaurant-price"
+                >
                   Price range
                 </label>
                 <select
+                  id="restaurant-price"
                   value={priceRange}
                   onChange={(e) => setPriceRange(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -316,10 +327,14 @@ export default function FoodPage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">
+                <label
+                  className="text-sm font-medium text-muted-foreground"
+                  htmlFor="restaurant-address"
+                >
                   Address
                 </label>
                 <Input
+                  id="restaurant-address"
                   placeholder="Optional"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -327,10 +342,14 @@ export default function FoodPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">
+              <label
+                className="text-sm font-medium text-muted-foreground"
+                htmlFor="restaurant-notes"
+              >
                 Notes
               </label>
               <Input
+                id="restaurant-notes"
                 placeholder="Best pasta in town..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}

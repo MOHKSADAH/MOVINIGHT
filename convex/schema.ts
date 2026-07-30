@@ -54,6 +54,8 @@ export default defineSchema({
     attendees: v.array(v.id("users")),
     candidates: v.array(v.id("movies")),
     pickedMovie: v.optional(v.id("movies")),
+    reminderJobId: v.optional(v.id("_scheduled_functions")),
+    reminderSentAt: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_date", ["date"]),
@@ -62,6 +64,8 @@ export default defineSchema({
     movieId: v.id("movies"),
     nightId: v.optional(v.id("movie_nights")),
     pickedBy: v.optional(v.id("users")),
+    /** Snapshot of who pushed this film (addedBy + upvoters) before watchlist removal */
+    suggestedBy: v.optional(v.array(v.id("users"))),
     watchedAt: v.number(),
     ratings: v.array(
       v.object({
