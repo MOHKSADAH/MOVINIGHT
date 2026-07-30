@@ -42,6 +42,11 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
 
         if (!res.ok) {
           const body = await res.text();
+          console.error("Resend OTP send failed", {
+            status: res.status,
+            body,
+            from,
+          });
           throw new Error(`Failed to send email: ${body}`);
         }
       },

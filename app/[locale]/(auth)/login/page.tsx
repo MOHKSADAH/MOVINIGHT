@@ -51,8 +51,13 @@ export default function LoginPage() {
       await signIn("email-otp", { email: email.trim() });
       setStep("code");
       toast.success(t("toastCodeSent"));
-    } catch {
-      toast.error(t("toastSendCodeFailed"));
+    } catch (error) {
+      const detail =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : t("toastSendCodeFailed");
+      console.error("email-otp send failed:", error);
+      toast.error(detail);
     } finally {
       setLoading(false);
     }
