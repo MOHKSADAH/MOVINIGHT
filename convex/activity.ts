@@ -2,8 +2,29 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+const activityItemValidator = v.object({
+  id: v.string(),
+  type: v.union(
+    v.literal("watchlist_add"),
+    v.literal("watched"),
+    v.literal("rating"),
+    v.literal("night"),
+  ),
+  at: v.number(),
+  href: v.string(),
+  actorName: v.optional(v.string()),
+  movieTitle: v.optional(v.string()),
+  movieTitleAr: v.optional(v.string()),
+  score: v.optional(v.number()),
+  note: v.optional(v.string()),
+  ratingCount: v.optional(v.number()),
+  nightTitle: v.optional(v.string()),
+  nightStatus: v.optional(v.string()),
+});
+
 export const getRecentActivity = query({
   args: { limit: v.optional(v.number()) },
+  returns: v.array(activityItemValidator),
   handler: async (ctx, { limit = 12 }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
@@ -18,9 +39,15 @@ export const getRecentActivity = query({
       id: string;
       type: "watchlist_add" | "watched" | "rating" | "night";
       at: number;
-      title: string;
-      subtitle: string;
       href: string;
+      actorName?: string;
+      movieTitle?: string;
+      movieTitleAr?: string;
+      score?: number;
+      note?: string;
+      ratingCount?: number;
+      nightTitle?: string;
+      nightStatus?: string;
     };
 
     const items: Activity[] = [];
@@ -35,9 +62,10 @@ export const getRecentActivity = query({
         id: `wl-${entry._id}`,
         type: "watchlist_add",
         at: entry.addedAt,
-        title: `${user?.name ?? "Someone"} added ${movie.title}`,
-        subtitle: "to the watchlist",
         href: "/watchlist",
+        actorName: user?.name,
+        movieTitle: movie.title,
+        movieTitleAr: movie.titleAr,
       });
     }
 
@@ -48,12 +76,10 @@ export const getRecentActivity = query({
         id: `w-${entry._id}`,
         type: "watched",
         at: entry.watchedAt,
-        title: `Logged ${movie.title}`,
-        subtitle:
-          entry.ratings.length > 0
-            ? `${entry.ratings.length} rating${entry.ratings.length === 1 ? "" : "s"}`
-            : "waiting on ratings",
         href: "/watched",
+        movieTitle: movie.title,
+        movieTitleAr: movie.titleAr,
+        ratingCount: entry.ratings.length,
       });
 
       for (const r of entry.ratings) {
@@ -63,9 +89,12 @@ export const getRecentActivity = query({
           id: `r-${entry._id}-${r.userId}`,
           type: "rating",
           at: entry.watchedAt,
-          title: `${user?.name ?? "Someone"} rated ${movie.title} ${r.score}/10`,
-          subtitle: r.note,
           href: "/watched",
+          actorName: user?.name,
+          movieTitle: movie.title,
+          movieTitleAr: movie.titleAr,
+          score: r.score,
+          note: r.note,
         });
       }
     }
@@ -75,9 +104,9 @@ export const getRecentActivity = query({
         id: `n-${night._id}`,
         type: "night",
         at: night._creationTime,
-        title: night.title,
-        subtitle: `Movie night · ${night.status}`,
         href: `/night/${night._id}`,
+        nightTitle: night.title,
+        nightStatus: night.status,
       });
     }
 
