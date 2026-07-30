@@ -23,9 +23,11 @@ export default defineSchema({
   movies: defineTable({
     tmdbId: v.number(),
     title: v.string(),
+    titleAr: v.optional(v.string()),
     poster: v.string(),
     backdrop: v.optional(v.string()),
     overview: v.string(),
+    overviewAr: v.optional(v.string()),
     genres: v.array(v.string()),
     runtime: v.optional(v.number()),
     releaseYear: v.number(),

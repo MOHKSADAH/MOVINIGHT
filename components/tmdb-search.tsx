@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,12 @@ import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { TMDB_GENRES, type TmdbGenre } from "@/lib/tmdb-genres";
 import { cn } from "@/lib/utils";
+import { tmdbLanguageFromLocale } from "@/lib/locale";
+import {
+  fetchTmdbMovieDetail,
+  fetchTmdbMovieUpsertPayload,
+  type TmdbMovieDetail,
+} from "@/lib/tmdb-movie-upsert";
 
 interface TmdbMovie {
   id: number;
@@ -33,18 +40,7 @@ interface TmdbMovie {
   genre_ids: number[];
 }
 
-interface TmdbDetail {
-  id: number;
-  title: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  overview: string;
-  release_date: string;
-  vote_average: number;
-  vote_count: number;
-  runtime: number | null;
-  genres: { id: number; name: string }[];
-}
+type TmdbDetail = TmdbMovieDetail;
 
 type PreviewMovie = {
   tmdbId: number;
@@ -98,6 +94,12 @@ export function TMDBSearch({
   mode = "watchlist",
   nightId,
 }: TMDBSearchProps) {
+  const locale = useLocale();
+  const tmdbLanguage = tmdbLanguageFromLocale(locale);
+  const t = useTranslations("watchlist");
+  const tNights = useTranslations("nights");
+  const tCommon = useTranslations("common");
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TmdbMovie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,14 +127,14 @@ export function TMDBSearch({
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/tmdb/search?query=${encodeURIComponent(trimmedQuery)}`,
+          `/api/tmdb/search?query=${encodeURIComponent(trimmedQuery)}&language=${encodeURIComponent(tmdbLanguage)}`,
           { signal: controller.signal },
         );
         const data = await res.json();
         setResults(data.results ?? []);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        toast.error("Search failed");
+        toast.error(t("toastSearchFailed"));
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -142,7 +144,7 @@ export function TMDBSearch({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [trimmedQuery, open]);
+  }, [trimmedQuery, open, tmdbLanguage, t]);
 
   // Genre top picks when not searching by title
   useEffect(() => {
@@ -152,7 +154,7 @@ export function TMDBSearch({
     setLoading(true);
 
     const shuffle = shuffleNonce > 0;
-    const url = `/api/tmdb/discover?genreId=${selectedGenre.id}${
+    const url = `/api/tmdb/discover?genreId=${selectedGenre.id}&language=${encodeURIComponent(tmdbLanguage)}${
       shuffle ? "&shuffle=1" : ""
     }`;
 
@@ -163,7 +165,7 @@ export function TMDBSearch({
         setResults(data.results ?? []);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        toast.error("Could not load suggestions");
+        toast.error(t("toastSuggestionsFailed"));
         setResults([]);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -171,7 +173,7 @@ export function TMDBSearch({
     })();
 
     return () => controller.abort();
-  }, [open, trimmedQuery, selectedGenre, shuffleNonce]);
+  }, [open, trimmedQuery, selectedGenre, shuffleNonce, tmdbLanguage, t]);
 
   // Idle empty state
   useEffect(() => {
@@ -220,12 +222,14 @@ export function TMDBSearch({
       setPreview(quick);
       setPreviewOpen(true);
 
-      const res = await fetch(`/api/tmdb/movie/${tmdbMovie.id}`);
+      const res = await fetch(
+        `/api/tmdb/movie/${tmdbMovie.id}?language=${encodeURIComponent(tmdbLanguage)}`,
+      );
       if (!res.ok) return;
       const detail: TmdbDetail = await res.json();
       setPreview(detailToPreview(detail));
     } catch {
-      toast.error("Could not load movie details");
+      toast.error(t("toastDetailsFailed"));
     } finally {
       setPreviewLoading(false);
     }
@@ -235,41 +239,24 @@ export function TMDBSearch({
     async (tmdbId: number) => {
       setAdding(tmdbId);
       try {
-        const res = await fetch(`/api/tmdb/movie/${tmdbId}`);
-        const detail: TmdbDetail = await res.json();
+        const upsertArgs = await fetchTmdbMovieUpsertPayload(tmdbId);
+        const detail = await fetchTmdbMovieDetail(tmdbId, tmdbLanguage);
 
-        const movieId = await upsertMovie({
-          tmdbId: detail.id,
-          title: detail.title,
-          poster: detail.poster_path
-            ? `${TMDB_IMG}${detail.poster_path}`
-            : "/placeholder.jpg",
-          backdrop: detail.backdrop_path
-            ? `${TMDB_BACKDROP}${detail.backdrop_path}`
-            : undefined,
-          overview: detail.overview,
-          genres: detail.genres.map((g) => g.name),
-          runtime: detail.runtime ?? undefined,
-          releaseYear: detail.release_date
-            ? new Date(detail.release_date).getFullYear()
-            : 0,
-          imdbRating: detail.vote_average,
-          imdbVotes: detail.vote_count,
-        });
+        const movieId = await upsertMovie(upsertArgs);
 
         if (mode === "watchlist") {
           await addToWatchlist({ movieId });
-          toast.success(`"${detail.title}" added to watchlist`);
+          toast.success(t("toastAddedToWatchlist", { title: detail.title }));
         } else if (mode === "candidate" && nightId) {
           await addCandidate({ nightId, movieId });
-          toast.success(`"${detail.title}" added as candidate`);
+          toast.success(t("toastAddedCandidate", { title: detail.title }));
         }
 
         setAdded((prev) => new Set(prev).add(tmdbId));
         onMovieAdded?.(movieId);
         setPreviewOpen(false);
       } catch {
-        toast.error("Failed to add movie");
+        toast.error(t("toastAddFailed"));
       } finally {
         setAdding(null);
       }
@@ -281,6 +268,8 @@ export function TMDBSearch({
       mode,
       nightId,
       onMovieAdded,
+      tmdbLanguage,
+      t,
     ],
   );
 
@@ -298,10 +287,17 @@ export function TMDBSearch({
 
   const addLabel =
     mode === "watchlist"
-      ? "Add to watchlist"
+      ? t("addToWatchlist")
       : mode === "candidate"
-        ? "Add as candidate"
-        : "Add to collection";
+        ? t("addAsCandidate")
+        : t("addToCollection");
+
+  const dialogTitle =
+    mode === "watchlist"
+      ? t("searchDialogTitle")
+      : mode === "collection"
+        ? t("addToCollection")
+        : tNights("searchDialogTitle");
 
   const showEmptySearch = !loading && results.length === 0 && !!trimmedQuery;
   const showIdleHint =
@@ -314,18 +310,12 @@ export function TMDBSearch({
       <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col gap-0 p-0">
           <DialogHeader className="px-5 pt-5 pb-4">
-            <DialogTitle>
-              {mode === "watchlist"
-                ? "Add to Watchlist"
-                : mode === "collection"
-                  ? "Add to Collection"
-                  : "Add Candidate"}
-            </DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
 
           <div className="px-5 pb-3 space-y-3">
             <Input
-              placeholder="Search for a movie..."
+              placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -334,7 +324,7 @@ export function TMDBSearch({
             {!trimmedQuery && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Or browse top picks by genre
+                  {t("browseByGenreHint")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {TMDB_GENRES.map((genre) => {
@@ -364,7 +354,7 @@ export function TMDBSearch({
             {selectedGenre && !trimmedQuery && (
               <div className="flex items-center justify-between gap-2 pt-0.5">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Top {selectedGenre.name}
+                  {t("topGenre", { genre: selectedGenre.name })}
                 </p>
                 <Button
                   type="button"
@@ -375,7 +365,7 @@ export function TMDBSearch({
                   disabled={loading}
                 >
                   <Shuffle className="h-3.5 w-3.5" />
-                  Shuffle
+                  {t("shuffle")}
                 </Button>
               </div>
             )}
@@ -396,19 +386,19 @@ export function TMDBSearch({
 
             {showEmptySearch && (
               <p className="text-center text-sm text-muted-foreground py-8">
-                No results found
+                {t("noResults")}
               </p>
             )}
 
             {showIdleHint && (
               <p className="text-center text-sm text-muted-foreground py-8">
-                Search by title, or pick a genre above
+                {t("idleHint")}
               </p>
             )}
 
             {showEmptyGenre && (
               <p className="text-center text-sm text-muted-foreground py-8">
-                No top picks for this genre
+                {t("noGenrePicks")}
               </p>
             )}
 
@@ -427,7 +417,7 @@ export function TMDBSearch({
                   >
                     <button
                       type="button"
-                      className="flex flex-1 min-w-0 items-center gap-3 text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex flex-1 min-w-0 items-center gap-3 text-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => void openPreview(movie)}
                       disabled={previewLoading}
                     >
@@ -446,7 +436,7 @@ export function TMDBSearch({
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-sm font-medium truncate" dir="auto">
                           {movie.title}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -458,7 +448,7 @@ export function TMDBSearch({
                           {movie.vote_average > 0 && (
                             <div className="flex items-center gap-1 bg-yellow-500/10 rounded px-1.5 py-0.5">
                               <span className="text-[10px] font-bold text-yellow-600">
-                                IMDb
+                                {tCommon("imdb")}
                               </span>
                               <span className="text-xs font-semibold">
                                 {movie.vote_average.toFixed(1)}

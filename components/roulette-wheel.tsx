@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { motion, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { getLocalizedMovieTitle } from "@/lib/locale";
 
 interface CandidateMovie {
   _id: string;
   title: string;
+  titleAr?: string | null;
   poster: string;
 }
 
@@ -31,6 +34,8 @@ export function RouletteWheel({
   onPickMovie,
   disabled,
 }: RouletteWheelProps) {
+  const locale = useLocale();
+  const t = useTranslations("nights");
   const controls = useAnimation();
   const [spinning, setSpinning] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
@@ -46,8 +51,7 @@ export function RouletteWheel({
 
     const winnerIndex = Math.floor(Math.random() * movies.length);
     const sectorAngle = 360 / movies.length;
-    // Extra full rotations + land on winner at top
-    const baseRotation = 1440; // 4 full spins
+    const baseRotation = 1440;
     const targetOffset = 360 - winnerIndex * sectorAngle - sectorAngle / 2;
     const totalRotation = baseRotation + targetOffset;
 
@@ -55,12 +59,12 @@ export function RouletteWheel({
       rotate: totalRotation,
       transition: {
         duration: 4.5,
-        ease: [0.23, 1, 0.32, 1], // smooth deceleration
+        ease: [0.23, 1, 0.32, 1],
       },
     });
 
-    setWinnerId(movies[winnerIndex]._id);
-    onPickMovie(movies[winnerIndex]._id);
+    setWinnerId(movies[winnerIndex]!._id);
+    onPickMovie(movies[winnerIndex]!._id);
     setSpinning(false);
   };
 
@@ -79,8 +83,7 @@ export function RouletteWheel({
   };
 
   const getLabelPos = (index: number, total: number) => {
-    const angle =
-      (2 * Math.PI * (index + 0.5)) / total - Math.PI / 2;
+    const angle = (2 * Math.PI * (index + 0.5)) / total - Math.PI / 2;
     const r = radius * 0.62;
     return {
       x: center + r * Math.cos(angle),
@@ -92,9 +95,7 @@ export function RouletteWheel({
   if (movies.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 py-8">
-        <div className="text-muted-foreground text-sm">
-          Add at least 2 candidates to spin
-        </div>
+        <div className="text-muted-foreground text-sm">{t("rouletteEmpty")}</div>
       </div>
     );
   }
@@ -102,7 +103,6 @@ export function RouletteWheel({
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="relative">
-        {/* Pointer arrow at top */}
         <div
           className="absolute left-1/2 -translate-x-1/2 -top-3 z-10"
           style={{
@@ -125,10 +125,11 @@ export function RouletteWheel({
           {movies.map((movie, i) => {
             const label = getLabelPos(i, movies.length);
             const color = SECTOR_COLORS[i % SECTOR_COLORS.length];
+            const displayTitle = getLocalizedMovieTitle(movie, locale);
             const shortTitle =
-              movie.title.length > 10
-                ? movie.title.slice(0, 9) + "…"
-                : movie.title;
+              displayTitle.length > 10
+                ? displayTitle.slice(0, 9) + "…"
+                : displayTitle;
 
             return (
               <g key={movie._id}>
@@ -141,11 +142,11 @@ export function RouletteWheel({
                 <text
                   x={label.x}
                   y={label.y}
+                  fill="white"
+                  fontSize={11}
+                  fontWeight={600}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize={movies.length > 6 ? "8" : "9"}
-                  fontWeight="500"
-                  fill="white"
                   transform={`rotate(${label.angle}, ${label.x}, ${label.y})`}
                 >
                   {shortTitle}
@@ -153,7 +154,6 @@ export function RouletteWheel({
               </g>
             );
           })}
-          {/* Center cap */}
           <circle
             cx={center}
             cy={center}
@@ -167,17 +167,17 @@ export function RouletteWheel({
 
       <Button
         size="lg"
-        onClick={spin}
+        onClick={() => void spin()}
         disabled={spinning || movies.length < 2 || !!disabled}
         className="min-w-32"
       >
         {spinning ? (
           <span className="flex items-center gap-2">
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Spinning...
+            {t("spinning")}
           </span>
         ) : (
-          "Spin the Wheel"
+          t("spinTheWheel")
         )}
       </Button>
 
@@ -190,24 +190,25 @@ export function RouletteWheel({
           {(() => {
             const winner = movies.find((m) => m._id === winnerId);
             if (!winner) return null;
+            const winnerTitle = getLocalizedMovieTitle(winner, locale);
             return (
               <>
                 <p className="text-sm text-muted-foreground font-medium">
-                  Tonight we watch...
+                  {t("tonightWeWatch")}
                 </p>
                 <div className="flex flex-col items-center gap-2">
                   {winner.poster && winner.poster !== "/placeholder.jpg" && (
                     <div className="relative w-24 h-36 rounded-lg overflow-hidden shadow-lg">
                       <Image
                         src={winner.poster}
-                        alt={winner.title}
+                        alt={winnerTitle}
                         fill
                         className="object-cover"
                         sizes="96px"
                       />
                     </div>
                   )}
-                  <p className="text-lg font-bold">{winner.title}</p>
+                  <p className="text-lg font-bold">{winnerTitle}</p>
                 </div>
               </>
             );

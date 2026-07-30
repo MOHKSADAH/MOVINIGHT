@@ -6,9 +6,11 @@ export const upsertMovie = mutation({
   args: {
     tmdbId: v.number(),
     title: v.string(),
+    titleAr: v.optional(v.string()),
     poster: v.string(),
     backdrop: v.optional(v.string()),
     overview: v.string(),
+    overviewAr: v.optional(v.string()),
     genres: v.array(v.string()),
     runtime: v.optional(v.number()),
     releaseYear: v.number(),
@@ -24,7 +26,20 @@ export const upsertMovie = mutation({
       .withIndex("by_tmdbId", (q) => q.eq("tmdbId", args.tmdbId))
       .first();
 
-    if (existing) return existing._id;
+    if (existing) {
+      const patch: {
+        titleAr?: string;
+        overviewAr?: string;
+      } = {};
+      if (!existing.titleAr && args.titleAr) patch.titleAr = args.titleAr;
+      if (!existing.overviewAr && args.overviewAr) {
+        patch.overviewAr = args.overviewAr;
+      }
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(existing._id, patch);
+      }
+      return existing._id;
+    }
 
     return await ctx.db.insert("movies", args);
   },

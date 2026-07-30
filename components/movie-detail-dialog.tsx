@@ -1,21 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Star, CalendarDays } from "lucide-react";
+import {
+  getLocalizedMovieOverview,
+  getLocalizedMovieTitle,
+  type MovieTitleFields,
+} from "@/lib/locale";
+import { fetchTmdbMovieDetail } from "@/lib/tmdb-movie-upsert";
 
-interface Movie {
+interface Movie extends MovieTitleFields {
   _id?: string;
-  title: string;
+  tmdbId?: number;
   poster: string;
   backdrop?: string;
   releaseYear: number;
   imdbRating?: number;
   imdbVotes?: number;
   genres: string[];
-  overview: string;
   runtime?: number;
 }
 
@@ -25,7 +32,6 @@ interface MovieDetailDialogProps {
   onClose: () => void;
   onMarkWatched?: () => void;
   onRate?: () => void;
-  /** Extra primary action (e.g. Add to watchlist from search preview). */
   primaryActionLabel?: string;
   onPrimaryAction?: () => void;
   primaryActionDisabled?: boolean;
@@ -41,7 +47,65 @@ export function MovieDetailDialog({
   onPrimaryAction,
   primaryActionDisabled,
 }: MovieDetailDialogProps) {
+  const locale = useLocale();
+  const tCommon = useTranslations("common");
+  const tWatchlist = useTranslations("watchlist");
+  const tWatched = useTranslations("watched");
+  const [fetchedAr, setFetchedAr] = useState<{
+    titleAr?: string;
+    overviewAr?: string;
+  } | null>(null);
+  const fetchKey = `${movie?._id ?? ""}:${movie?.tmdbId ?? ""}:${open}`;
+  const [activeFetchKey, setActiveFetchKey] = useState(fetchKey);
+  if (activeFetchKey !== fetchKey) {
+    setActiveFetchKey(fetchKey);
+    setFetchedAr(null);
+  }
+
+  useEffect(() => {
+    if (!open || !movie || locale !== "ar") return;
+    if (movie.titleAr && movie.overviewAr) return;
+    if (!movie.tmdbId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const detail = await fetchTmdbMovieDetail(movie.tmdbId!, "ar");
+        if (cancelled) return;
+        setFetchedAr({
+          titleAr:
+            !movie.titleAr &&
+            detail.title.trim() &&
+            detail.title !== movie.title
+              ? detail.title
+              : undefined,
+          overviewAr:
+            !movie.overviewAr &&
+            detail.overview.trim() &&
+            detail.overview !== (movie.overview ?? "")
+              ? detail.overview
+              : undefined,
+        });
+      } catch {
+        // Keep stored English overview/title if TMDB Arabic fetch fails.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, movie, locale]);
+
   if (!movie) return null;
+
+  const localizedMovie = {
+    ...movie,
+    titleAr: movie.titleAr ?? fetchedAr?.titleAr,
+    overviewAr: movie.overviewAr ?? fetchedAr?.overviewAr,
+  };
+
+  const displayTitle = getLocalizedMovieTitle(localizedMovie, locale);
+  const displayOverview = getLocalizedMovieOverview(localizedMovie, locale);
 
   const hasBackdrop = movie.backdrop && movie.backdrop !== "/placeholder.jpg";
   const hasPoster = movie.poster && movie.poster !== "/placeholder.jpg";
@@ -49,9 +113,8 @@ export function MovieDetailDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden">
-        <DialogTitle className="sr-only">{movie.title}</DialogTitle>
+        <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
         <div className="max-h-[85vh] overflow-y-auto">
-          {/* Backdrop */}
           {hasBackdrop && (
             <div className="relative w-full aspect-video bg-muted">
               <Image
@@ -65,29 +128,26 @@ export function MovieDetailDialog({
             </div>
           )}
 
-          {/* Content */}
           <div className="p-6 space-y-4">
-            {/* Poster + Title */}
             <div className="flex gap-4">
               <div className="relative shrink-0 w-24 h-36 rounded-lg overflow-hidden bg-muted shadow-md">
                 {hasPoster ? (
                   <Image
                     src={movie.poster}
-                    alt={movie.title}
+                    alt={displayTitle}
                     fill
                     className="object-cover"
                     sizes="96px"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs text-center p-2">
-                    {movie.title}
+                    {displayTitle}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0 pt-1">
-                <h2 className="text-xl font-bold leading-tight">{movie.title}</h2>
+                <h2 className="text-xl font-bold leading-tight">{displayTitle}</h2>
 
-                {/* Meta row */}
                 <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="h-3.5 w-3.5" />
@@ -114,7 +174,6 @@ export function MovieDetailDialog({
                   )}
                 </div>
 
-                {/* Genres */}
                 {movie.genres.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {movie.genres.map((g) => (
@@ -127,14 +186,12 @@ export function MovieDetailDialog({
               </div>
             </div>
 
-            {/* Overview */}
-            {movie.overview && (
+            {displayOverview && (
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {movie.overview}
+                {displayOverview}
               </p>
             )}
 
-            {/* Actions */}
             <div className="flex gap-2 pt-2 border-t border-border">
               {onPrimaryAction && primaryActionLabel && (
                 <Button
@@ -147,16 +204,16 @@ export function MovieDetailDialog({
               )}
               {onMarkWatched && (
                 <Button className="flex-1" onClick={onMarkWatched}>
-                  Mark as Watched
+                  {tWatchlist("markAsWatched")}
                 </Button>
               )}
               {onRate && (
                 <Button variant="outline" className="flex-1" onClick={onRate}>
-                  Rate this
+                  {tWatched("rateThis")}
                 </Button>
               )}
               <Button variant="ghost" onClick={onClose}>
-                Close
+                {tCommon("close")}
               </Button>
             </div>
           </div>

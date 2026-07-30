@@ -1,14 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getDateFnsLocale,
+  getLocalizedMovieTitle,
+  type MovieTitleFields,
+} from "@/lib/locale";
 
-interface Movie {
+interface Movie extends MovieTitleFields {
   _id: string;
-  title: string;
   poster: string;
   releaseYear: number;
   imdbRating?: number;
@@ -46,9 +52,12 @@ export function WatchlistCard({
   canRemove,
   onClick,
 }: WatchlistCardProps) {
+  const locale = useLocale();
+  const tCommon = useTranslations("common");
+  const title = getLocalizedMovieTitle(movie, locale);
+
   return (
     <div className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors">
-      {/* Poster */}
       <div
         className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer"
         onClick={onClick}
@@ -56,26 +65,24 @@ export function WatchlistCard({
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
-            alt={movie.title}
+            alt={title}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs text-center p-3">
-            {movie.title}
+            {title}
           </div>
         )}
-        {/* IMDb badge overlay */}
         {movie.imdbRating && (
           <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
-            <span className="text-[10px] font-bold text-yellow-400">IMDb</span>
+            <span className="text-[10px] font-bold text-yellow-400">{tCommon("imdb")}</span>
             <span className="text-xs font-semibold text-white">
               {movie.imdbRating.toFixed(1)}
             </span>
           </div>
         )}
-        {/* Remove button overlay */}
         {canRemove && onRemove && (
           <button
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
@@ -86,12 +93,9 @@ export function WatchlistCard({
         )}
       </div>
 
-      {/* Info */}
       <div className="p-3 flex flex-col gap-2 flex-1">
         <div>
-          <h3 className="font-medium text-sm leading-tight line-clamp-2">
-            {movie.title}
-          </h3>
+          <h3 className="font-medium text-sm leading-tight line-clamp-2">{title}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             {movie.releaseYear}
             {movie.runtime ? ` · ${movie.runtime}m` : ""}
@@ -115,10 +119,11 @@ export function WatchlistCard({
         )}
 
         {addedBy && (
-          <p className="text-[10px] text-muted-foreground">Added by {addedBy}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {tCommon("addedBy", { name: addedBy })}
+          </p>
         )}
 
-        {/* Vote buttons pinned to bottom */}
         <div className="flex gap-1.5 mt-auto pt-1">
           <Button
             variant={hasUpvoted ? "default" : "outline"}
@@ -163,10 +168,12 @@ export function WatchedGridCard({
   onClick,
   onDelete,
 }: WatchedGridCardProps) {
-  const date = new Date(watchedAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  const locale = useLocale();
+  const tCommon = useTranslations("common");
+  const tWatched = useTranslations("watched");
+  const title = getLocalizedMovieTitle(movie, locale);
+  const date = format(new Date(watchedAt), "MMM d, yyyy", {
+    locale: getDateFnsLocale(locale),
   });
 
   return (
@@ -174,24 +181,23 @@ export function WatchedGridCard({
       className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors"
       onClick={onClick}
     >
-      {/* Poster */}
       <div className="relative aspect-2/3 bg-muted shrink-0">
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
-            alt={movie.title}
+            alt={title}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs text-center p-3">
-            {movie.title}
+            {title}
           </div>
         )}
         {movie.imdbRating && (
           <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
-            <span className="text-[10px] font-bold text-yellow-400">IMDb</span>
+            <span className="text-[10px] font-bold text-yellow-400">{tCommon("imdb")}</span>
             <span className="text-xs font-semibold text-white">
               {movie.imdbRating.toFixed(1)}
             </span>
@@ -200,7 +206,7 @@ export function WatchedGridCard({
         {myRating && !onDelete && (
           <div className="absolute top-2 right-2 bg-black/70 rounded px-1.5 py-0.5">
             <span className="text-[10px] font-semibold text-white">
-              You: {myRating.score}/10
+              {tCommon("youRating", { score: myRating.score })}
             </span>
           </div>
         )}
@@ -217,15 +223,12 @@ export function WatchedGridCard({
         )}
       </div>
 
-      {/* Info */}
       <div className="p-3 flex flex-col gap-1 flex-1">
-        <h3 className="font-medium text-sm leading-tight line-clamp-2">
-          {movie.title}
-        </h3>
+        <h3 className="font-medium text-sm leading-tight line-clamp-2">{title}</h3>
         <p className="text-xs text-muted-foreground">{date}</p>
         {avgRating !== undefined && (
           <p className="text-xs text-muted-foreground">
-            Group:{" "}
+            {tCommon("groupRating")}{" "}
             <span className="font-medium text-foreground">
               {avgRating.toFixed(1)}
             </span>{" "}
@@ -242,7 +245,7 @@ export function WatchedGridCard({
               onClick();
             }}
           >
-            {myRating ? "Update rating" : "Rate this"}
+            {myRating ? tWatched("updateRating") : tWatched("rateThis")}
           </Button>
         </div>
       </div>
@@ -267,10 +270,11 @@ export function WatchedCard({
   ratingCount,
   onClick,
 }: WatchedCardProps) {
-  const date = new Date(watchedAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  const locale = useLocale();
+  const tCommon = useTranslations("common");
+  const title = getLocalizedMovieTitle(movie, locale);
+  const date = format(new Date(watchedAt), "MMM d, yyyy", {
+    locale: getDateFnsLocale(locale),
   });
 
   return (
@@ -285,31 +289,29 @@ export function WatchedCard({
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
-            alt={movie.title}
+            alt={title}
             fill
             className="object-cover"
             sizes="64px"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-            No image
+            {tCommon("noImage")}
           </div>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-sm leading-tight truncate">
-          {movie.title}
+        <h3 className="font-medium text-sm leading-tight truncate" dir="auto">
+          {title}
         </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {movie.releaseYear}
-        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">{movie.releaseYear}</p>
         <p className="text-xs text-muted-foreground mt-1">{date}</p>
 
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           {movie.imdbRating && (
             <div className="flex items-center gap-1 bg-yellow-500/10 rounded px-1.5 py-0.5">
-              <span className="text-[10px] font-bold text-yellow-600">IMDb</span>
+              <span className="text-[10px] font-bold text-yellow-600">{tCommon("imdb")}</span>
               <span className="text-xs font-semibold">{movie.imdbRating.toFixed(1)}</span>
             </div>
           )}
@@ -317,13 +319,13 @@ export function WatchedCard({
             <div className="flex items-center gap-1">
               <span className="text-xs font-medium">{avgRating.toFixed(1)}</span>
               <span className="text-[10px] text-muted-foreground">
-                group ({ratingCount})
+                {tCommon("groupRatingCount", { count: ratingCount })}
               </span>
             </div>
           )}
           {myRating !== undefined && (
             <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-              You: {myRating}/10
+              {tCommon("youRating", { score: myRating })}
             </Badge>
           )}
         </div>
@@ -339,6 +341,9 @@ interface MoviePosterCardProps {
 }
 
 export function MoviePosterCard({ movie, onClick, selected }: MoviePosterCardProps) {
+  const locale = useLocale();
+  const title = getLocalizedMovieTitle(movie, locale);
+
   return (
     <div
       className={cn(
@@ -351,19 +356,21 @@ export function MoviePosterCard({ movie, onClick, selected }: MoviePosterCardPro
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
-            alt={movie.title}
+            alt={title}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 50vw, 200px"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs text-center p-2">
-            {movie.title}
+            {title}
           </div>
         )}
       </div>
       <div className="p-2 bg-card">
-        <p className="text-xs font-medium truncate">{movie.title}</p>
+        <p className="text-xs font-medium truncate" dir="auto">
+          {title}
+        </p>
         <p className="text-[10px] text-muted-foreground">{movie.releaseYear}</p>
       </div>
     </div>

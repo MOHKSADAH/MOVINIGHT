@@ -175,10 +175,15 @@ export const getCalendarNights = query({
       nights.map(async (night) => {
         let pickedMovieData: {
           title: string;
+          titleAr?: string;
           poster: string;
           imdbRating?: number;
         } | null = null;
-        let firstCandidateData: { title: string; poster: string } | null = null;
+        let firstCandidateData: {
+          title: string;
+          titleAr?: string;
+          poster: string;
+        } | null = null;
         let avgRating: number | null = null;
 
         if (night.pickedMovie) {
@@ -186,6 +191,7 @@ export const getCalendarNights = query({
           if (movie) {
             pickedMovieData = {
               title: movie.title,
+              titleAr: movie.titleAr,
               poster: movie.poster,
               imdbRating: movie.imdbRating,
             };
@@ -208,6 +214,7 @@ export const getCalendarNights = query({
           if (firstCandidate) {
             firstCandidateData = {
               title: firstCandidate.title,
+              titleAr: firstCandidate.titleAr,
               poster: firstCandidate.poster,
             };
           }
@@ -218,7 +225,11 @@ export const getCalendarNights = query({
         );
         const candidatePosters = candidateMovies
           .filter((m): m is NonNullable<typeof m> => m !== null)
-          .map((m) => ({ title: m.title, poster: m.poster }));
+          .map((m) => ({
+            title: m.title,
+            titleAr: m.titleAr,
+            poster: m.poster,
+          }));
 
         return {
           ...night,

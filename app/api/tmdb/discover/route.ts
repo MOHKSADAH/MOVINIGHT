@@ -8,6 +8,11 @@ export async function GET(request: NextRequest) {
   const genreId = searchParams.get("genreId");
   const shuffle = searchParams.get("shuffle") === "1";
   const pageParam = searchParams.get("page");
+  const languageParam = searchParams.get("language");
+  const language =
+    languageParam === "ar" || languageParam === "en-US"
+      ? languageParam
+      : "en-US";
 
   if (!genreId || !/^\d+$/.test(genreId)) {
     return NextResponse.json({ results: [] });
@@ -22,7 +27,7 @@ export async function GET(request: NextRequest) {
         : "1";
 
   const params = new URLSearchParams({
-    language: "en-US",
+    language,
     page,
     include_adult: "false",
     with_genres: genreId,
