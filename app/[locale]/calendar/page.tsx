@@ -32,7 +32,6 @@ type CalendarNight = {
   title: string;
   date: number;
   status: "upcoming" | "active" | "done";
-  attendees: string[];
   candidates: string[];
   pickedMovieData: {
     title: string;
@@ -367,12 +366,6 @@ export default function CalendarPage() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3 mt-2 ps-11">
-                                  <span className="text-xs text-muted-foreground">
-                                    {tCommon("attending", {
-                                      count: night.attendees.length,
-                                    })}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">·</span>
                                   <span className="text-xs text-muted-foreground">
                                     {tCommon("candidates", {
                                       count: night.candidates.length,

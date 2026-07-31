@@ -1,11 +1,16 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Email } from "@convex-dev/auth/providers/Email";
 import Google from "@auth/core/providers/google";
+import { renderOtpEmail } from "./lib/otpEmail";
+
+/** Token lifetime, shared with the email copy so the two can't drift. */
+const OTP_TTL_SECONDS = 60 * 60;
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Email({
       id: "email-otp",
+      maxAge: OTP_TTL_SECONDS,
       generateVerificationToken: async () => {
         return String(Math.floor(100000 + Math.random() * 900000));
       },
@@ -13,7 +18,14 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const apiKey = process.env.AUTH_RESEND_KEY;
         if (!apiKey) throw new Error("AUTH_RESEND_KEY is not set");
 
-        const from = process.env.AUTH_RESEND_FROM ?? "Movie Night <onboarding@resend.dev>";
+        const from =
+          process.env.AUTH_RESEND_FROM ?? "Movie Night <onboarding@resend.dev>";
+
+        const { subject, html, text } = renderOtpEmail({
+          token,
+          expiresInMinutes: OTP_TTL_SECONDS / 60,
+          siteUrl: process.env.SITE_URL ?? "https://www.whopickedthis.app",
+        });
 
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -24,19 +36,9 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           body: JSON.stringify({
             from,
             to: [email],
-            subject: "Your Movie Night sign-in code",
-            html: `
-              <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:24px">
-                <h2 style="margin:0 0 8px">Movie Night</h2>
-                <p style="color:#666;margin:0 0 24px">Your sign-in code:</p>
-                <div style="font-size:36px;font-weight:bold;letter-spacing:8px;text-align:center;padding:16px;background:#f5f5f5;border-radius:8px">
-                  ${token}
-                </div>
-                <p style="color:#999;font-size:12px;margin-top:24px">
-                  This code expires in 1 hour. If you didn't request this, you can safely ignore this email.
-                </p>
-              </div>
-            `,
+            subject,
+            html,
+            text,
           }),
         });
 

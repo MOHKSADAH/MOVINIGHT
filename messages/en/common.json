@@ -27,7 +27,6 @@
   "people": "people",
   "movie": "movie",
   "movies": "movies",
-  "attending": "{count} attending",
   "candidates": "{count} candidates",
   "moviesCount": "{count} movies",
   "moviesWatchedCount": "{count} movies watched",

@@ -12,6 +12,7 @@ import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
 import type * as collections from "../collections.js";
 import type * as http from "../http.js";
+import type * as lib_otpEmail from "../lib/otpEmail.js";
 import type * as movies from "../movies.js";
 import type * as nights from "../nights.js";
 import type * as nightsActions from "../nightsActions.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   collections: typeof collections;
   http: typeof http;
+  "lib/otpEmail": typeof lib_otpEmail;
   movies: typeof movies;
   nights: typeof nights;
   nightsActions: typeof nightsActions;

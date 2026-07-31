@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-chakra-petch), Chakra Petch, ui-sans-serif, sans-serif, system-ui;
-  --font-mono: var(--font-ibm-plex-mono), IBM Plex Mono, ui-monospace, monospace;
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
   --font-arabic: var(--font-ibm-plex-sans-arabic), IBM Plex Sans Arabic, ui-sans-serif, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -192,11 +192,24 @@
   --shadow-2xl: 0 20px 48px -10px oklch(0 0 0 / 0.65);
 }
 
+/* `@theme inline` bakes each theme value into the utility it generates, so the
+   stacks sit behind these vars — they stay swappable per document language. */
+:root {
+  --app-font-sans: var(--font-chakra-petch), "Chakra Petch", ui-sans-serif, sans-serif,
+    system-ui;
+  --app-font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+}
+
 /* Must be unlayered and after :root/.dark so it wins over Chakra Petch */
 html[lang="ar"],
 html[lang="ar"].dark {
-  --font-sans: var(--font-ibm-plex-sans-arabic), "IBM Plex Sans Arabic", ui-sans-serif,
+  --app-font-sans: var(--font-ibm-plex-sans-arabic), "IBM Plex Sans Arabic", ui-sans-serif,
     sans-serif, system-ui;
+  /* Plex Mono ships no Arabic glyphs, so those codepoints fall through to the
+     Arabic face while Latin and digits keep the monospace look. */
+  --app-font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono",
+    var(--font-ibm-plex-sans-arabic), "IBM Plex Sans Arabic", ui-monospace, monospace;
+  --font-sans: var(--app-font-sans);
 }
 
 @layer base {

@@ -1,5 +1,5 @@
 {
-  "appName": "ليلة فيلم",
+  "appName": "ليلة الفيلم",
   "appDescription": "تتبّع الأفلام مع مجموعتك",
   "loading": "جاري التحميل...",
   "cancel": "إلغاء",
@@ -27,7 +27,6 @@
   "people": "أشخاص",
   "movie": "فيلم",
   "movies": "أفلام",
-  "attending": "{count} حاضر",
   "candidates": "{count} مرشّح",
   "moviesCount": "{count} أفلام",
   "moviesWatchedCount": "{count} أفلام شُوهدت",

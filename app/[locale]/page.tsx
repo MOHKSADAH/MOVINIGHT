@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/empty-state";
 import { NightCountdown } from "@/components/night-countdown";
 import { ActivityFeed } from "@/components/activity-feed";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -317,10 +316,7 @@ export default function DashboardPage() {
                       />
                     </div>
                     <div className="text-end shrink-0">
-                      <Badge variant="secondary">
-                        {tCommon("attending", { count: nextNight.attendees.length })}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground">
                         {tCommon("candidates", { count: nextNight.candidates.length })}
                       </p>
                     </div>
