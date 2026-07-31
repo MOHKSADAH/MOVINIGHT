@@ -6,6 +6,7 @@ const namespaces = [
   "common",
   "nav",
   "auth",
+  "onboarding",
   "dashboard",
   "watchlist",
   "watched",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
@@ -132,11 +132,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { signOut } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.getCurrentUser);
+  const accountActive = useQuery(api.users.isAccountActive);
 
   const handleSignOut = async () => {
     await signOut();
     router.replace("/login");
   };
+
+  // An access token stays valid for up to an hour after the account is deleted,
+  // so drop the session as soon as the backend reports the account is gone.
+  useEffect(() => {
+    if (accountActive !== false) return;
+    void signOut().then(() => router.replace("/login"));
+  }, [accountActive, signOut, router]);
+
+  // Email sign-up gives us no display name, so send those users to onboarding.
+  // Google users arrive with a name and skip it.
+  useEffect(() => {
+    if (!user || user.name?.trim()) return;
+    router.replace("/onboarding");
+  }, [user, router]);
 
   const isDark = useSyncExternalStore(
     subscribeTheme,

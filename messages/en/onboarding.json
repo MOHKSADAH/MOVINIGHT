@@ -1,0 +1,11 @@
+{
+  "title": "Welcome to the crew",
+  "subtitle": "Pick the name and face your crew will see on ratings, nights, and the leaderboards.",
+  "nameLabel": "Display name",
+  "namePlaceholder": "What should we call you?",
+  "nameHint": "You can change this any time from your profile.",
+  "avatarTitle": "Your avatar",
+  "avatarSubtitle": "Upload a photo or pick one of ours.",
+  "submit": "Enter the theatre",
+  "saveFailed": "Couldn't save your details. Try again."
+}
