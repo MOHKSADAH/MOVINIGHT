@@ -1,12 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser, requireActiveUser } from "./lib/users";
 import { internal } from "./_generated/api";
 
 export const getNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
     return await ctx.db.query("movie_nights").order("desc").collect();
   },
@@ -15,7 +15,7 @@ export const getNights = query({
 export const getUpcomingNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
     return await ctx.db
       .query("movie_nights")
@@ -27,7 +27,7 @@ export const getUpcomingNights = query({
 export const getNight = query({
   args: { nightId: v.id("movie_nights") },
   handler: async (ctx, { nightId }) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return null;
 
     const night = await ctx.db.get(nightId);
@@ -59,8 +59,7 @@ export const createNight = mutation({
     date: v.number(),
   },
   handler: async (ctx, { title, date }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const nightId = await ctx.db.insert("movie_nights", {
       title,
@@ -85,8 +84,7 @@ export const addCandidate = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, { nightId, movieId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
 
     const night = await ctx.db.get(nightId);
     if (!night) throw new Error("Night not found");
@@ -105,8 +103,7 @@ export const pickMovie = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, { nightId, movieId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
 
     await ctx.db.patch(nightId, {
       pickedMovie: movieId,
@@ -125,8 +122,7 @@ export const updateNightStatus = mutation({
     ),
   },
   handler: async (ctx, { nightId, status }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
 
     const night = await ctx.db.get(nightId);
     if (!night) throw new Error("Night not found");
@@ -148,8 +144,7 @@ export const updateNightStatus = mutation({
 export const joinNight = mutation({
   args: { nightId: v.id("movie_nights") },
   handler: async (ctx, { nightId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const night = await ctx.db.get(nightId);
     if (!night) throw new Error("Night not found");
@@ -165,7 +160,7 @@ export const joinNight = mutation({
 export const getCalendarNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
 
     const nights = await ctx.db.query("movie_nights").order("desc").collect();

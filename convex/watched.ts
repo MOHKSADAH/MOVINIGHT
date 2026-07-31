@@ -1,11 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser, requireActiveUser, requireAppOwner } from "./lib/users";
 
 export const getWatchedEntries = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
 
     const entries = await ctx.db
@@ -30,8 +30,7 @@ export const addWatchedEntry = mutation({
     watchedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
 
     const watchlistEntry = await ctx.db
       .query("watchlist_entries")
@@ -74,8 +73,7 @@ export const addRating = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, { entryId, score, note }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
@@ -90,7 +88,7 @@ export const addRating = mutation({
 export const getWatchedCount = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return 0;
     const entries = await ctx.db.query("watched_entries").collect();
     return entries.length;
@@ -100,8 +98,8 @@ export const getWatchedCount = query({
 export const getUserStats = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const callerId = await getAuthUserId(ctx);
-    if (!callerId) return null;
+    const caller = await getActiveUser(ctx);
+    if (!caller) return null;
 
     const entries = await ctx.db.query("watched_entries").collect();
     const userRatings = entries.flatMap((e) =>
@@ -123,13 +121,7 @@ export const getUserStats = query({
 export const deleteWatchedEntry = mutation({
   args: { entryId: v.id("watched_entries") },
   handler: async (ctx, { entryId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    const caller = await ctx.db.get(userId);
-    const ownerEmail = process.env.APP_OWNER_EMAIL;
-    const callerIsOwner =
-      !!ownerEmail && !!caller?.email && caller.email === ownerEmail;
-    if (!callerIsOwner) throw new Error("Not authorized");
+    await requireAppOwner(ctx);
     await ctx.db.delete(entryId);
   },
 });
@@ -137,7 +129,7 @@ export const deleteWatchedEntry = mutation({
 export const getRecentWatched = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 5 }) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
 
     const entries = await ctx.db

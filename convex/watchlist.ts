@@ -1,11 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser, requireActiveUser } from "./lib/users";
 
 export const getWatchlist = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
 
     // Collect all watched movieIds to exclude from watchlist
@@ -36,8 +36,7 @@ export const addToWatchlist = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, { movieId, note }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const existing = await ctx.db
       .query("watchlist_entries")
@@ -59,8 +58,7 @@ export const addToWatchlist = mutation({
 export const toggleUpvote = mutation({
   args: { entryId: v.id("watchlist_entries") },
   handler: async (ctx, { entryId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
@@ -77,8 +75,7 @@ export const toggleUpvote = mutation({
 export const toggleDownvote = mutation({
   args: { entryId: v.id("watchlist_entries") },
   handler: async (ctx, { entryId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
@@ -96,8 +93,7 @@ export const toggleDownvote = mutation({
 export const removeFromWatchlist = mutation({
   args: { entryId: v.id("watchlist_entries") },
   handler: async (ctx, { entryId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
     await ctx.db.delete(entryId);
   },
 });
@@ -105,7 +101,7 @@ export const removeFromWatchlist = mutation({
 export const getWatchlistCount = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return 0;
     const entries = await ctx.db.query("watchlist_entries").collect();
     return entries.length;

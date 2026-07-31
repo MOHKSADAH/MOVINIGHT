@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireActiveUser } from "./lib/users";
 
 export const upsertMovie = mutation({
   args: {
@@ -18,8 +18,7 @@ export const upsertMovie = mutation({
     imdbVotes: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
 
     const existing = await ctx.db
       .query("movies")

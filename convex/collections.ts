@@ -1,11 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser, requireActiveUser } from "./lib/users";
 
 export const getCollections = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return [];
 
     const collections = await ctx.db.query("collections").collect();
@@ -41,7 +41,7 @@ export const getCollections = query({
 export const getCollection = query({
   args: { collectionId: v.id("collections") },
   handler: async (ctx, { collectionId }) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = (await getActiveUser(ctx))?._id;
     if (!userId) return null;
 
     const collection = await ctx.db.get(collectionId);
@@ -79,8 +79,7 @@ export const createCollection = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
     return await ctx.db.insert("collections", {
       name: args.name,
       description: args.description,
@@ -93,8 +92,7 @@ export const createCollection = mutation({
 export const deleteCollection = mutation({
   args: { collectionId: v.id("collections") },
   handler: async (ctx, { collectionId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const collection = await ctx.db.get(collectionId);
     if (!collection || collection.ownerId !== userId)
@@ -115,8 +113,7 @@ export const addMovieToCollection = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const existing = await ctx.db
       .query("collection_movies")
@@ -138,8 +135,7 @@ export const addMovieToCollection = mutation({
 export const removeMovieFromCollection = mutation({
   args: { entryId: v.id("collection_movies") },
   handler: async (ctx, { entryId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
     await ctx.db.delete(entryId);
   },
 });

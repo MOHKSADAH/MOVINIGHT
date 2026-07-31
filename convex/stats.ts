@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser } from "./lib/users";
 import type { Doc, Id } from "./_generated/dataModel";
 
 type UserRef = {
@@ -28,8 +28,8 @@ function avg(nums: number[]): number | null {
 export const getHallOfFame = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const caller = await getActiveUser(ctx);
+    if (!caller) return null;
 
     const [users, watched, nights, watchlist] = await Promise.all([
       ctx.db.query("users").collect(),
@@ -38,7 +38,11 @@ export const getHallOfFame = query({
       ctx.db.query("watchlist_entries").collect(),
     ]);
 
-    const userMap = new Map(users.map((u) => [u._id, u]));
+    // Deleted members are left out of the map so every leaderboard row that
+    // resolves through `userRef` drops them.
+    const userMap = new Map(
+      users.filter((u) => u.deletedAt === undefined).map((u) => [u._id, u]),
+    );
 
     const ratingsByUser = new Map<Id<"users">, number[]>();
     for (const entry of watched) {
@@ -193,8 +197,8 @@ export const getCharts = query({
     now: v.number(),
   },
   handler: async (ctx, { now }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
+    const caller = await getActiveUser(ctx);
+    if (!caller) {
       return { byMonth: [], byGenre: [], ratingHistogram: [] };
     }
 
@@ -261,8 +265,8 @@ export const getCharts = query({
 export const getSeasonWrap = query({
   args: { year: v.number() },
   handler: async (ctx, { year }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const caller = await getActiveUser(ctx);
+    if (!caller) return null;
 
     const start = Date.UTC(year, 0, 1);
     const end = Date.UTC(year + 1, 0, 1);
@@ -329,8 +333,8 @@ export const getSeasonWrap = query({
 export const getRoasts = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
+    const caller = await getActiveUser(ctx);
+    if (!caller) return [];
 
     const [users, watched, watchlist, nights] = await Promise.all([
       ctx.db.query("users").collect(),
@@ -338,7 +342,9 @@ export const getRoasts = query({
       ctx.db.query("watchlist_entries").collect(),
       ctx.db.query("movie_nights").collect(),
     ]);
-    const userMap = new Map(users.map((u) => [u._id, u]));
+    const userMap = new Map(
+      users.filter((u) => u.deletedAt === undefined).map((u) => [u._id, u]),
+    );
     const roasts: string[] = [];
 
     const ratingsByUser = new Map<Id<"users">, number[]>();

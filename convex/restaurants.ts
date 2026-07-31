@@ -1,20 +1,14 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
-
-function isAppOwner(email: string | undefined): boolean {
-  const ownerEmail = process.env.APP_OWNER_EMAIL;
-  return !!ownerEmail && !!email && email === ownerEmail;
-}
+import { getActiveUser, isAppOwner, requireActiveUser } from "./lib/users";
 
 export const getRestaurants = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
+    const caller = await getActiveUser(ctx);
+    if (!caller) return [];
 
-    const caller = await ctx.db.get(userId);
-    const callerIsOwner = isAppOwner(caller?.email);
+    const callerIsOwner = isAppOwner(caller.email);
 
     const restaurants = await ctx.db.query("restaurants").collect();
     const enriched = await Promise.all(
@@ -23,8 +17,8 @@ export const getRestaurants = query({
         return {
           ...r,
           addedByName: addedByUser?.name ?? "Unknown",
-          hasUpvoted: r.upvotes.includes(userId),
-          isOwner: callerIsOwner || r.addedBy === userId,
+          hasUpvoted: r.upvotes.includes(caller._id),
+          isOwner: callerIsOwner || r.addedBy === caller._id,
         };
       }),
     );
@@ -41,8 +35,7 @@ export const addRestaurant = mutation({
     priceRange: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
     return await ctx.db.insert("restaurants", {
       ...args,
       addedBy: userId,
@@ -55,8 +48,7 @@ export const addRestaurant = mutation({
 export const deleteRestaurant = mutation({
   args: { restaurantId: v.id("restaurants") },
   handler: async (ctx, { restaurantId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
     await ctx.db.delete(restaurantId);
   },
 });
@@ -64,8 +56,7 @@ export const deleteRestaurant = mutation({
 export const toggleUpvote = mutation({
   args: { restaurantId: v.id("restaurants") },
   handler: async (ctx, { restaurantId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = (await requireActiveUser(ctx))._id;
 
     const restaurant = await ctx.db.get(restaurantId);
     if (!restaurant) throw new Error("Not found");

@@ -15,9 +15,14 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     // App-specific fields
+    /** Resolved image URL: an uploaded file, a `/avatars/*.svg` preset, or an OAuth picture. */
     avatar: v.optional(v.string()),
+    /** Set only for uploads, so the old file can be removed when the avatar changes. */
+    avatarStorageId: v.optional(v.id("_storage")),
     bio: v.optional(v.string()),
     createdAt: v.optional(v.number()),
+    /** Set when the account is deleted; the row is kept so shared history stays intact. */
+    deletedAt: v.optional(v.number()),
   }).index("email", ["email"]),
 
   movies: defineTable({

@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUser } from "./lib/users";
 
 const activityItemValidator = v.object({
   id: v.string(),
@@ -26,8 +26,8 @@ export const getRecentActivity = query({
   args: { limit: v.optional(v.number()) },
   returns: v.array(activityItemValidator),
   handler: async (ctx, { limit = 12 }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
+    const caller = await getActiveUser(ctx);
+    if (!caller) return [];
 
     const [watchlist, watched, nights] = await Promise.all([
       ctx.db.query("watchlist_entries").collect(),
