@@ -22,11 +22,22 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Star, List, Eye, Pencil, Crown } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Star, List, Eye, Pencil, Crown, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useRouter } from "@/i18n/navigation";
+import { AvatarPicker } from "@/components/avatar-picker";
 import { getDateFnsLocale, getLocalizedMovieTitle } from "@/lib/locale";
 
 export default function ProfilePage({
@@ -41,6 +52,8 @@ export default function ProfilePage({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const dateFnsLocale = getDateFnsLocale(locale);
+  const router = useRouter();
+  const { signOut } = useAuthActions();
 
   const currentUser = useQuery(api.users.getCurrentUser);
   const profileUser = useQuery(api.users.getUserById, { userId });
@@ -48,18 +61,24 @@ export default function ProfilePage({
   const watchedEntries = useQuery(api.watched.getWatchedEntries);
   const watchlist = useQuery(api.watchlist.getWatchlist);
   const updateUser = useMutation(api.users.updateUser);
+  const deleteAccount = useMutation(api.users.deleteAccount);
 
   const isOwnProfile = currentUser?._id === userId;
+  const viewerIsAppOwner = currentUser?.isOwner === true;
+  const profileIsAppOwner = profileUser?.isOwner === true;
+  // The owner account is never deletable, so the crew can't lose its admin.
+  const canDeleteProfile =
+    !profileIsAppOwner && (isOwnProfile || viewerIsAppOwner);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editAvatar, setEditAvatar] = useState("");
   const [editBio, setEditBio] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleOpenEdit = () => {
     setEditName(profileUser?.name ?? "");
-    setEditAvatar(profileUser?.avatar ?? "");
     setEditBio((profileUser as { bio?: string } | null | undefined)?.bio ?? "");
     setEditOpen(true);
   };
@@ -69,7 +88,6 @@ export default function ProfilePage({
     try {
       await updateUser({
         name: editName.trim() || undefined,
-        avatar: editAvatar.trim() || undefined,
         bio: editBio.trim() || undefined,
       });
       toast.success(t("toastProfileUpdated"));
@@ -78,6 +96,24 @@ export default function ProfilePage({
       toast.error(t("toastProfileFailed"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount(isOwnProfile ? {} : { userId });
+      toast.success(t("toastAccountDeleted"));
+      setDeleteOpen(false);
+      if (isOwnProfile) {
+        await signOut();
+        router.replace("/login");
+      } else {
+        router.replace("/members");
+      }
+    } catch {
+      toast.error(t("toastDeleteAccountFailed"));
+      setDeleting(false);
     }
   };
 
@@ -364,6 +400,35 @@ export default function ProfilePage({
             )}
           </TabsContent>
         </Tabs>
+
+        {canDeleteProfile && (
+          <>
+            <Separator />
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-destructive">
+                {t("deleteAccountTitle")}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {isOwnProfile
+                  ? t("deleteOwnAccountDescription")
+                  : t("deleteMemberDescription", {
+                      name: profileUser.name ?? tCommon("unknown"),
+                    })}
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {isOwnProfile
+                  ? t("deleteOwnAccountAction")
+                  : t("deleteMemberAction")}
+              </Button>
+            </section>
+          </>
+        )}
       </div>
 
       {/* Edit Profile Sheet */}
@@ -378,28 +443,10 @@ export default function ProfilePage({
           </SheetHeader>
 
           <div className="space-y-6 px-6 py-6">
-            <div className="space-y-3">
-              <div className="flex justify-center">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={editAvatar || avatarSrc} />
-                  <AvatarFallback className="text-2xl">
-                    {editName?.[0]?.toUpperCase() ?? "?"}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-avatar">{t("avatarUrlLabel")}</Label>
-                <Input
-                  id="edit-avatar"
-                  placeholder={t("avatarUrlPlaceholder")}
-                  value={editAvatar}
-                  onChange={(e) => setEditAvatar(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("avatarUrlHint")}
-                </p>
-              </div>
-            </div>
+            <AvatarPicker
+              currentAvatar={avatarSrc}
+              fallbackInitial={editName?.[0]?.toUpperCase()}
+            />
 
             <Separator />
 
@@ -447,6 +494,40 @@ export default function ProfilePage({
           </div>
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => !deleting && setDeleteOpen(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {isOwnProfile
+                ? t("deleteOwnDialogDescription")
+                : t("deleteMemberDialogDescription", {
+                    name: profileUser.name ?? tCommon("unknown"),
+                  })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={deleting}
+              onClick={() => setDeleteOpen(false)}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => void handleDeleteAccount()}
+            >
+              {deleting ? t("deletingAccount") : tCommon("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
