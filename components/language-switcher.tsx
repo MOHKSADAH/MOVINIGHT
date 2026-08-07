@@ -9,9 +9,15 @@ import { cn } from "@/lib/utils";
 type Props = {
   className?: string;
   compact?: boolean;
+  /** Single square toggle for narrow rails (e.g. collapsed sidebar). */
+  iconOnly?: boolean;
 };
 
-export function LanguageSwitcher({ className, compact = false }: Props) {
+export function LanguageSwitcher({
+  className,
+  compact = false,
+  iconOnly = false,
+}: Props) {
   const t = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
@@ -21,6 +27,27 @@ export function LanguageSwitcher({ className, compact = false }: Props) {
     if (next === locale) return;
     router.replace(pathname, { locale: next });
   };
+
+  if (iconOnly) {
+    const next: AppLocale = locale === "ar" ? "en" : "ar";
+    const nextLabel = next === "ar" ? t("arabic") : t("english");
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-9 w-9 shrink-0 p-0 text-xs font-semibold text-muted-foreground hover:text-foreground",
+          className,
+        )}
+        onClick={() => switchLocale(next)}
+        aria-label={nextLabel}
+        title={nextLabel}
+      >
+        {next === "ar" ? "ع" : "EN"}
+      </Button>
+    );
+  }
 
   return (
     <div

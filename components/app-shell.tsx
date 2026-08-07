@@ -20,12 +20,10 @@ import {
   Moon,
   Sun,
   BookMarked,
-  Utensils,
   Crown,
   PanelLeftClose,
   PanelLeft,
   Trophy,
-  Clapperboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AUTH_DISABLED } from "@/lib/auth-flags";
@@ -34,11 +32,9 @@ const navItems = [
   { href: "/", labelKey: "dashboard" as const, icon: LayoutDashboard },
   { href: "/watchlist", labelKey: "watchlist" as const, icon: List },
   { href: "/watched", labelKey: "watched" as const, icon: Eye },
-  { href: "/food", labelKey: "food" as const, icon: Utensils },
   { href: "/calendar", labelKey: "calendar" as const, icon: CalendarDays },
   { href: "/collections", labelKey: "collections" as const, icon: BookMarked },
   { href: "/hall-of-fame", labelKey: "hallOfFame" as const, icon: Trophy },
-  { href: "/members", labelKey: "crew" as const, icon: Clapperboard },
 ];
 
 const SIDEBAR_KEY = "sidebarCollapsed";
@@ -288,7 +284,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </Link>
           )}
-          <div className={cn("flex gap-1", collapsed && "flex-col items-center")}>
+          <div
+            className={cn(
+              "flex gap-1",
+              collapsed ? "flex-col items-center" : "items-center",
+            )}
+          >
             {!collapsed && (
               <Button
                 type="button"
@@ -306,7 +307,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+                className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => void handleSignOut()}
                 aria-label={t("signOut")}
                 title={t("signOut")}
@@ -318,7 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               variant="ghost"
               size="sm"
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+              className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground"
               onClick={toggleTheme}
               aria-label={
                 isDark ? t("switchToLightMode") : t("switchToDarkMode")
@@ -331,7 +332,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <LanguageSwitcher compact className={collapsed ? "" : "ms-auto"} />
+            <LanguageSwitcher
+              compact
+              iconOnly={collapsed}
+              className={collapsed ? undefined : "ms-auto"}
+            />
           </div>
         </div>
       </aside>
