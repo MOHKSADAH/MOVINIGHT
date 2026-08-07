@@ -27,5 +27,11 @@
   "toastAddedToWatchlist": "أُضيف «{title}» إلى قائمة المشاهدة",
   "toastAddedCandidate": "أُضيف «{title}» كمرشّح",
   "toastAddFailed": "تعذّرت إضافة الفيلم",
-  "markAsWatched": "وضع علامة «شُوهد»"
+  "markAsWatched": "وضع علامة «شُوهد»",
+  "director": "المخرج",
+  "cast": "طاقم التمثيل",
+  "trailer": "مشاهدة الإعلان",
+  "filmography": "الأعمال السينمائية",
+  "personLoadFailed": "تعذّر تحميل أفلام هذا الشخص",
+  "noFilmography": "لا توجد أعمال مسجّلة"
 }

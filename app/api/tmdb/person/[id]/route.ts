@@ -7,6 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  if (!/^\d+$/.test(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
   const { searchParams } = new URL(request.url);
   const languageParam = searchParams.get("language");
   const language =
@@ -15,12 +19,13 @@ export async function GET(
       : "en-US";
 
   const res = await fetch(
-    `${TMDB_BASE}/movie/${id}?language=${language}&append_to_response=credits,videos`,
+    `${TMDB_BASE}/person/${id}?language=${language}&append_to_response=movie_credits`,
     {
       headers: {
         Authorization: `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
       },
+      next: { revalidate: 3600 },
     },
   );
 

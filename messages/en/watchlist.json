@@ -27,5 +27,11 @@
   "toastAddedToWatchlist": "\"{title}\" added to watchlist",
   "toastAddedCandidate": "\"{title}\" added as candidate",
   "toastAddFailed": "Failed to add movie",
-  "markAsWatched": "Mark as Watched"
+  "markAsWatched": "Mark as Watched",
+  "director": "Director",
+  "cast": "Cast",
+  "trailer": "Watch trailer",
+  "filmography": "Filmography",
+  "personLoadFailed": "Couldn't load this person's films",
+  "noFilmography": "No film credits found"
 }
