@@ -109,7 +109,7 @@ export default function ProfilePage({
         await signOut();
         router.replace("/login");
       } else {
-        router.replace("/members");
+        router.replace("/");
       }
     } catch {
       toast.error(t("toastDeleteAccountFailed"));
