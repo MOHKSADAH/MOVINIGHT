@@ -25,10 +25,11 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { getDateFnsLocale, getLocalizedMovieTitle } from "@/lib/locale";
+import { averageFiveStarScores } from "@/lib/ratings";
+import { cn } from "@/lib/utils";
 
 function ImdbMark({ rating }: { rating: number }) {
   const tCommon = useTranslations("common");
@@ -146,7 +147,6 @@ const QUICK_LINK_KEYS = [
   { href: "/watchlist", icon: Plus, titleKey: "quickAddMovieTitle", bodyKey: "quickAddMovieBody" },
   { href: "/watched", icon: Eye, titleKey: "quickLogTitle", bodyKey: "quickLogBody" },
   { href: "/calendar", icon: CalendarDays, titleKey: "quickScheduleTitle", bodyKey: "quickScheduleBody" },
-  { href: "/members", icon: Clapperboard, titleKey: "quickCrewTitle", bodyKey: "quickCrewBody" },
 ] as const;
 
 export default function DashboardPage() {
@@ -458,11 +458,9 @@ export default function DashboardPage() {
               ) : recentWatched.length > 0 ? (
                 recentWatched.map((entry, index) => {
                   if (!entry.movie) return null;
-                  const avgRating =
-                    entry.ratings.length > 0
-                      ? entry.ratings.reduce((s, r) => s + r.score, 0) /
-                        entry.ratings.length
-                      : null;
+                  const avgRating = averageFiveStarScores(
+                    entry.ratings.map((r) => r.score),
+                  );
                   const movieTitle = getLocalizedMovieTitle(
                     entry.movie,
                     locale,

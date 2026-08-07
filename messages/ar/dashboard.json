@@ -44,7 +44,7 @@
   "activityWatched": "تم تسجيل «{title}»",
   "activityRatingsWaiting": "في انتظار التقييمات",
   "activityRatingsCount": "{count} تقييمات",
-  "activityRated": "قيّم {name} «{title}» {score}/10",
+  "activityRated": "قيّم {name} «{title}» {score}/5",
   "activityNightSubtitle": "ليلة فيلم · {status}",
   "someone": "شخص ما"
 }

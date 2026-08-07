@@ -157,6 +157,7 @@ interface WatchedGridCardProps {
   myRating?: { score: number; note?: string };
   ratingCount: number;
   onClick: () => void;
+  onRate: () => void;
   onDelete?: () => void;
 }
 
@@ -167,6 +168,7 @@ export function WatchedGridCard({
   myRating,
   ratingCount,
   onClick,
+  onRate,
   onDelete,
 }: WatchedGridCardProps) {
   const locale = useLocale();
@@ -178,11 +180,11 @@ export function WatchedGridCard({
   });
 
   return (
-    <div
-      className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors"
-      onClick={onClick}
-    >
-      <div className="relative aspect-2/3 bg-muted shrink-0">
+    <div className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors">
+      <div
+        className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer"
+        onClick={onClick}
+      >
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
@@ -226,7 +228,12 @@ export function WatchedGridCard({
       </div>
 
       <div className="p-3 flex flex-col gap-1 flex-1">
-        <h3 className="font-medium text-sm leading-tight line-clamp-2">{title}</h3>
+        <h3
+          className="font-medium text-sm leading-tight line-clamp-2 cursor-pointer"
+          onClick={onClick}
+        >
+          {title}
+        </h3>
         <p className="text-xs text-muted-foreground">{date}</p>
         {avgRating !== undefined && (
           <p className="text-xs text-muted-foreground">
@@ -244,7 +251,7 @@ export function WatchedGridCard({
             className="w-full h-7 text-xs"
             onClick={(e) => {
               e.stopPropagation();
-              onClick();
+              onRate();
             }}
           >
             {myRating ? tWatched("updateRating") : tWatched("rateThis")}

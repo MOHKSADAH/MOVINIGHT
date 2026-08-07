@@ -34,6 +34,11 @@ import { useTranslations, useLocale } from "next-intl";
 import { getLocalizedMovieTitle, getDateFnsLocale, tmdbLanguageFromLocale } from "@/lib/locale";
 import { fetchTmdbMovieUpsertPayload } from "@/lib/tmdb-movie-upsert";
 import { getPageItems } from "@/lib/pagination";
+import {
+  averageFiveStarScores,
+  RATING_MAX,
+  toFiveStarScale,
+} from "@/lib/ratings";
 import { DayPicker } from "react-day-picker";
 import { format } from "date-fns";
 import "react-day-picker/style.css";
@@ -339,7 +344,7 @@ function LogMovieDialog({
           <div className="space-y-1.5">
             <p className="text-sm font-medium">{t("yourRating")}</p>
             <div className="flex justify-center">
-              <StarRating value={score} onChange={setScore} size="lg" max={10} />
+              <StarRating value={score} onChange={setScore} size="lg" max={RATING_MAX} />
             </div>
           </div>
 
@@ -391,7 +396,9 @@ function RatingDialog({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const myRating = entry.ratings.find((r) => r.userId === currentUserId);
-  const [score, setScore] = useState(myRating?.score ?? 0);
+  const [score, setScore] = useState(
+    myRating ? toFiveStarScale(myRating.score) : 0,
+  );
   const [note, setNote] = useState(myRating?.note ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -428,7 +435,7 @@ function RatingDialog({
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="flex justify-center">
-            <StarRating value={score} onChange={setScore} size="lg" max={10} />
+            <StarRating value={score} onChange={setScore} size="lg" max={RATING_MAX} />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium" htmlFor="rate-entry-note">
@@ -541,13 +548,17 @@ export default function WatchedPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {paged.map((entry) => {
                 if (!entry.movie) return null;
-                const avgRating =
-                  entry.ratings.length > 0
-                    ? entry.ratings.reduce((s, r) => s + r.score, 0) /
-                      entry.ratings.length
-                    : undefined;
-                const myRating = user
+                const avgRating = averageFiveStarScores(
+                  entry.ratings.map((r) => r.score),
+                );
+                const myRatingRaw = user
                   ? entry.ratings.find((r) => r.userId === user._id)
+                  : undefined;
+                const myRating = myRatingRaw
+                  ? {
+                      ...myRatingRaw,
+                      score: toFiveStarScale(myRatingRaw.score),
+                    }
                   : undefined;
 
                 return (
@@ -559,6 +570,7 @@ export default function WatchedPage() {
                     myRating={myRating}
                     ratingCount={entry.ratings.length}
                     onClick={() => setDetailEntry(entry as WatchedEntry)}
+                    onRate={() => setRatingEntry(entry as WatchedEntry)}
                     onDelete={(user as { isOwner?: boolean } | null)?.isOwner
                       ? () => handleDelete(entry._id)
                       : undefined}

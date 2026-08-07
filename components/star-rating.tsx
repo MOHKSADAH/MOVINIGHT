@@ -16,7 +16,7 @@ export function StarRating({
   onChange,
   readonly = false,
   size = "md",
-  max = 10,
+  max = 5,
 }: StarRatingProps) {
   const [hovered, setHovered] = useState<number | null>(null);
 

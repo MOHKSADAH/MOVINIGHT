@@ -44,7 +44,7 @@
   "next": "التالي",
   "close": "إغلاق",
   "noImage": "لا صورة",
-  "youRating": "أنت: {score}/10",
+  "youRating": "أنت: {score}/5",
   "groupRatingCount": "المجموعة ({count})",
   "activityToday": "اليوم",
   "activityYesterday": "أمس",

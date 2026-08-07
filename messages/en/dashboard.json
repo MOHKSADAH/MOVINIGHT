@@ -44,7 +44,7 @@
   "activityWatched": "Logged {title}",
   "activityRatingsWaiting": "waiting on ratings",
   "activityRatingsCount": "{count} ratings",
-  "activityRated": "{name} rated {title} {score}/10",
+  "activityRated": "{name} rated {title} {score}/5",
   "activityNightSubtitle": "Movie night · {status}",
   "someone": "Someone"
 }

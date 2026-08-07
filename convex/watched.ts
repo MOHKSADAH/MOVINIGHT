@@ -75,6 +75,10 @@ export const addRating = mutation({
   handler: async (ctx, { entryId, score, note }) => {
     const userId = (await requireActiveUser(ctx))._id;
 
+    if (!Number.isInteger(score) || score < 1 || score > 5) {
+      throw new Error("Rating must be a whole number from 1 to 5");
+    }
+
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
 

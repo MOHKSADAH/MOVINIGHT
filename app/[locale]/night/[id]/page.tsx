@@ -112,7 +112,7 @@ function WrapUpDialog({
             <>
               <div className="space-y-1.5">
                 <p className="text-sm font-medium">{t("yourRating")}</p>
-                <StarRating value={score} onChange={setScore} size="md" max={10} />
+                <StarRating value={score} onChange={setScore} size="md" max={5} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium" htmlFor="wrap-up-note">

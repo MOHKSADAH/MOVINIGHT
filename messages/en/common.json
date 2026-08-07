@@ -44,7 +44,7 @@
   "next": "Next",
   "close": "Close",
   "noImage": "No image",
-  "youRating": "You: {score}/10",
+  "youRating": "You: {score}/5",
   "groupRatingCount": "group ({count})",
   "activityToday": "Today",
   "activityYesterday": "Yesterday",

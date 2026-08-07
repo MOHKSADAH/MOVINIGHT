@@ -1,5 +1,6 @@
 import { useLocale, useTranslations } from "next-intl";
 import { getLocalizedMovieTitle } from "@/lib/locale";
+import { toFiveStarScale } from "@/lib/ratings";
 
 export type ActivityItem = {
   id: string;
@@ -60,7 +61,7 @@ export function useFormatActivityItem() {
           title: t("activityRated", {
             name,
             title: movieTitle,
-            score: item.score ?? 0,
+            score: toFiveStarScale(item.score ?? 0),
           }),
           subtitle: item.note ?? "",
         };
