@@ -109,6 +109,16 @@ export default defineSchema({
     address: v.optional(v.string()),
     notes: v.optional(v.string()),
     priceRange: v.optional(v.string()),
+    city: v.optional(
+      v.union(
+        v.literal("dammam"),
+        v.literal("saihat"),
+        v.literal("qatif"),
+      ),
+    ),
+    imageUrl: v.optional(v.string()),
     upvotes: v.array(v.id("users")),
-  }).index("by_category", ["category"]),
+  })
+    .index("by_category", ["category"])
+    .index("by_city", ["city"]),
 });

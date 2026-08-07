@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -24,6 +25,12 @@ import { useTranslations } from "next-intl";
 
 const CATEGORY_SLUGS = [
   "All",
+  "Saudi",
+  "Lebanese",
+  "Yemeni",
+  "Seafood",
+  "Kebab",
+  "Sandwiches",
   "Pizza",
   "Burgers",
   "Sushi",
@@ -32,12 +39,11 @@ const CATEGORY_SLUGS = [
   "Mexican",
   "Italian",
   "Thai",
-  "Kebab",
-  "Sandwiches",
-  "Seafood",
   "Steakhouse",
   "Other",
 ] as const;
+
+const CITY_SLUGS = ["All", "dammam", "saihat", "qatif"] as const;
 
 function categoryLabel(
   slug: string,
@@ -45,6 +51,9 @@ function categoryLabel(
 ): string {
   const keys: Record<string, string> = {
     All: "categoryAll",
+    Saudi: "categorySaudi",
+    Lebanese: "categoryLebanese",
+    Yemeni: "categoryYemeni",
     Pizza: "categoryPizza",
     Burgers: "categoryBurgers",
     Sushi: "categorySushi",
@@ -63,7 +72,20 @@ function categoryLabel(
   return key ? t(key as "categoryAll") : slug;
 }
 
+function cityLabel(
+  slug: string,
+  t: ReturnType<typeof useTranslations<"food">>,
+): string {
+  if (slug === "All") return t("cityAll");
+  if (slug === "dammam") return t("cityDammam");
+  if (slug === "saihat") return t("citySaihat");
+  if (slug === "qatif") return t("cityQatif");
+  return slug;
+}
+
 const PRICE_RANGES = ["$", "$$", "$$$"];
+
+type RestaurantCity = "dammam" | "saihat" | "qatif";
 
 type Restaurant = {
   _id: Id<"restaurants">;
@@ -72,6 +94,8 @@ type Restaurant = {
   address?: string;
   notes?: string;
   priceRange?: string;
+  city?: RestaurantCity;
+  imageUrl?: string;
   upvotes: Id<"users">[];
   addedByName: string;
   hasUpvoted: boolean;
@@ -85,15 +109,19 @@ export default function FoodPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [pickedOpen, setPickedOpen] = useState(false);
-  const [pickedRestaurant, setPickedRestaurant] = useState<Restaurant | null>(null);
+  const [pickedRestaurant, setPickedRestaurant] = useState<Restaurant | null>(
+    null,
+  );
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCity, setActiveCity] = useState("All");
 
-  // Form state
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [city, setCity] = useState<"" | RestaurantCity>("");
+  const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   const restaurants = useQuery(api.restaurants.getRestaurants);
@@ -104,9 +132,23 @@ export default function FoodPage() {
   const filtered =
     restaurants === undefined
       ? undefined
-      : activeCategory === "All"
-        ? restaurants
-        : restaurants.filter((r) => r.category === activeCategory);
+      : restaurants.filter((r) => {
+          const categoryOk =
+            activeCategory === "All" || r.category === activeCategory;
+          const cityOk =
+            activeCity === "All" || r.city === activeCity;
+          return categoryOk && cityOk;
+        });
+
+  const resetForm = () => {
+    setName("");
+    setCategory("");
+    setAddress("");
+    setNotes("");
+    setPriceRange("");
+    setCity("");
+    setImageUrl("");
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,13 +161,11 @@ export default function FoodPage() {
         address: address.trim() || undefined,
         notes: notes.trim() || undefined,
         priceRange: priceRange || undefined,
+        city: city || undefined,
+        imageUrl: imageUrl.trim() || undefined,
       });
       toast.success(t("toastAdded"));
-      setName("");
-      setCategory("");
-      setAddress("");
-      setNotes("");
-      setPriceRange("");
+      resetForm();
       setAddOpen(false);
     } catch {
       toast.error(t("toastAddFailed"));
@@ -156,7 +196,7 @@ export default function FoodPage() {
       toast.error(t("toastNothingToPick"));
       return;
     }
-    const pick = filtered[Math.floor(Math.random() * filtered.length)];
+    const pick = filtered[Math.floor(Math.random() * filtered.length)]!;
     setPickedRestaurant(pick as Restaurant);
     setPickedOpen(true);
   };
@@ -164,7 +204,6 @@ export default function FoodPage() {
   return (
     <AppShell>
       <div className="p-6 max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">{t("title")}</h1>
@@ -191,18 +230,35 @@ export default function FoodPage() {
           </div>
         </div>
 
-        {/* Category filter */}
-        <div className="flex gap-2 flex-wrap mb-5">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {CITY_SLUGS.map((c) => (
+            <button
+              type="button"
+              key={c}
+              onClick={() => setActiveCity(c)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-sm transition-colors",
+                activeCity === c
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+              )}
+            >
+              {cityLabel(c, t)}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-5 flex flex-wrap gap-2">
           {CATEGORY_SLUGS.map((cat) => (
             <button
               type="button"
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={cn(
-                "px-3 py-1 rounded-full text-sm border transition-colors",
+                "rounded-full border px-3 py-1 text-sm transition-colors",
                 activeCategory === cat
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
               )}
             >
               {categoryLabel(cat, t)}
@@ -210,21 +266,23 @@ export default function FoodPage() {
           ))}
         </div>
 
-        {/* List */}
         {filtered === undefined ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-lg" />
+              <Skeleton key={i} className="h-28 rounded-lg" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={Utensils}
             title={
-              activeCategory === "All"
+              activeCategory === "All" && activeCity === "All"
                 ? tEmpty("noRestaurantsTitle")
                 : tEmpty("noRestaurantsCategoryTitle", {
-                    category: categoryLabel(activeCategory, t),
+                    category:
+                      activeCategory !== "All"
+                        ? categoryLabel(activeCategory, t)
+                        : cityLabel(activeCity, t),
                   })
             }
             description={tEmpty("noRestaurantsDesc")}
@@ -236,58 +294,76 @@ export default function FoodPage() {
             {filtered.map((r) => (
               <div
                 key={r._id}
-                className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
+                className="flex items-stretch gap-3 overflow-hidden rounded-lg border border-border bg-card"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-sm">{r.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {r.category}
-                    </Badge>
-                    {r.priceRange && (
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {r.priceRange}
-                      </span>
-                    )}
+                {r.imageUrl ? (
+                  <div className="relative hidden w-28 shrink-0 sm:block">
+                    <Image
+                      src={r.imageUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="112px"
+                    />
                   </div>
-                  {r.address && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <p className="text-xs text-muted-foreground truncate">
-                        {r.address}
-                      </p>
+                ) : null}
+                <div className="flex min-w-0 flex-1 items-start gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold">{r.name}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {categoryLabel(r.category, t)}
+                      </Badge>
+                      {r.city ? (
+                        <Badge variant="outline" className="text-xs">
+                          {cityLabel(r.city, t)}
+                        </Badge>
+                      ) : null}
+                      {r.priceRange ? (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {r.priceRange}
+                        </span>
+                      ) : null}
                     </div>
-                  )}
-                  {r.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 italic">
-                      {r.notes}
+                    {r.address ? (
+                      <div className="mt-1 flex items-center gap-1">
+                        <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <p className="truncate text-xs text-muted-foreground">
+                          {r.address}
+                        </p>
+                      </div>
+                    ) : null}
+                    {r.notes ? (
+                      <p className="mt-1 text-xs italic text-muted-foreground">
+                        {r.notes}
+                      </p>
+                    ) : null}
+                    <p className="mt-1.5 text-[10px] text-muted-foreground">
+                      {tCommon("addedBy", { name: r.addedByName })}
                     </p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground mt-1.5">
-                    {tCommon("addedBy", { name: r.addedByName })}
-                  </p>
-                </div>
+                  </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant={r.hasUpvoted ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    onClick={() => handleUpvote(r._id)}
-                  >
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                    {r.upvotes.length}
-                  </Button>
-                  {r.isOwner && (
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <Button
-                      variant="outline"
+                      variant={r.hasUpvoted ? "default" : "outline"}
                       size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:border-destructive"
-                      onClick={() => handleDelete(r._id)}
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => handleUpvote(r._id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      {r.upvotes.length}
                     </Button>
-                  )}
+                    {r.isOwner ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:border-destructive hover:text-destructive"
+                        onClick={() => handleDelete(r._id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}
@@ -295,13 +371,12 @@ export default function FoodPage() {
         )}
       </div>
 
-      {/* Add Restaurant Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("addDialogTitle")}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-3">
+          <form onSubmit={(e) => void handleAdd(e)} className="space-y-3">
             <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="restaurant-name">
                 {tCommon("name")}
@@ -316,7 +391,10 @@ export default function FoodPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="restaurant-category">
+              <label
+                className="text-sm font-medium"
+                htmlFor="restaurant-category"
+              >
                 {t("categoryLabel")}
               </label>
               <select
@@ -332,6 +410,24 @@ export default function FoodPage() {
                     {categoryLabel(cat, t)}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="restaurant-city">
+                {t("cityLabel")}
+              </label>
+              <select
+                id="restaurant-city"
+                value={city}
+                onChange={(e) =>
+                  setCity(e.target.value as "" | RestaurantCity)
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">{tCommon("optionalPlain")}</option>
+                <option value="dammam">{t("cityDammam")}</option>
+                <option value="saihat">{t("citySaihat")}</option>
+                <option value="qatif">{t("cityQatif")}</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -374,6 +470,20 @@ export default function FoodPage() {
             <div className="space-y-1">
               <label
                 className="text-sm font-medium text-muted-foreground"
+                htmlFor="restaurant-image"
+              >
+                {t("imageUrlLabel")}
+              </label>
+              <Input
+                id="restaurant-image"
+                placeholder={t("imageUrlPlaceholder")}
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label
+                className="text-sm font-medium text-muted-foreground"
                 htmlFor="restaurant-notes"
               >
                 {t("notesLabel")}
@@ -393,7 +503,10 @@ export default function FoodPage() {
               >
                 {tCommon("cancel")}
               </Button>
-              <Button type="submit" disabled={saving || !name.trim() || !category}>
+              <Button
+                type="submit"
+                disabled={saving || !name.trim() || !category}
+              >
                 {saving ? tCommon("adding") : tCommon("add")}
               </Button>
             </DialogFooter>
@@ -401,38 +514,57 @@ export default function FoodPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Picked Restaurant Dialog */}
       <Dialog open={pickedOpen} onOpenChange={setPickedOpen}>
         <DialogContent className="max-w-sm text-center">
           <DialogHeader>
-            <DialogTitle className="text-center">{t("pickDialogTitle")}</DialogTitle>
+            <DialogTitle className="text-center">
+              {t("pickDialogTitle")}
+            </DialogTitle>
           </DialogHeader>
-          {pickedRestaurant && (
-            <div className="py-4 space-y-3">
-              <div className="text-4xl font-bold">{pickedRestaurant.name}</div>
+          {pickedRestaurant ? (
+            <div className="space-y-3 py-4">
+              {pickedRestaurant.imageUrl ? (
+                <div className="relative mx-auto h-36 w-full overflow-hidden rounded-lg">
+                  <Image
+                    src={pickedRestaurant.imageUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="384px"
+                  />
+                </div>
+              ) : null}
+              <div className="text-2xl font-bold">{pickedRestaurant.name}</div>
               <div className="flex items-center justify-center gap-2">
-                <Badge variant="secondary">{pickedRestaurant.category}</Badge>
-                {pickedRestaurant.priceRange && (
-                  <span className="text-sm font-mono text-muted-foreground">
+                <Badge variant="secondary">
+                  {categoryLabel(pickedRestaurant.category, t)}
+                </Badge>
+                {pickedRestaurant.city ? (
+                  <Badge variant="outline">
+                    {cityLabel(pickedRestaurant.city, t)}
+                  </Badge>
+                ) : null}
+                {pickedRestaurant.priceRange ? (
+                  <span className="font-mono text-sm text-muted-foreground">
                     {pickedRestaurant.priceRange}
                   </span>
-                )}
+                ) : null}
               </div>
-              {pickedRestaurant.address && (
+              {pickedRestaurant.address ? (
                 <div className="flex items-center justify-center gap-1.5">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     {pickedRestaurant.address}
                   </p>
                 </div>
-              )}
-              {pickedRestaurant.notes && (
-                <p className="text-sm text-muted-foreground italic">
+              ) : null}
+              {pickedRestaurant.notes ? (
+                <p className="text-sm italic text-muted-foreground">
                   {pickedRestaurant.notes}
                 </p>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
           <DialogFooter className="justify-center gap-2">
             <Button variant="outline" onClick={handlePickForMe}>
               {t("pickAgain")}
