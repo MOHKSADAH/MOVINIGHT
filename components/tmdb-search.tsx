@@ -19,7 +19,11 @@ import Image from "next/image";
 import { Plus, Check, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
-import { TMDB_GENRES, type TmdbGenre } from "@/lib/tmdb-genres";
+import {
+  TMDB_GENRES,
+  genreNamesFromIds,
+  type TmdbGenre,
+} from "@/lib/tmdb-genres";
 import { cn } from "@/lib/utils";
 import { tmdbLanguageFromLocale } from "@/lib/locale";
 import {
@@ -215,10 +219,7 @@ export function TMDBSearch({
           ? `${TMDB_BACKDROP}${tmdbMovie.backdrop_path}`
           : undefined,
         overview: tmdbMovie.overview,
-        genres: tmdbMovie.genre_ids.flatMap((id) => {
-          const name = TMDB_GENRES.find((g) => g.id === id)?.name;
-          return name ? [name] : [];
-        }),
+        genres: genreNamesFromIds(tmdbMovie.genre_ids, 8),
         releaseYear: tmdbMovie.release_date
           ? new Date(tmdbMovie.release_date).getFullYear()
           : 0,
@@ -416,6 +417,7 @@ export function TMDBSearch({
                 const year = movie.release_date
                   ? new Date(movie.release_date).getFullYear()
                   : null;
+                const genres = genreNamesFromIds(movie.genre_ids);
 
                 return (
                   <div
@@ -446,7 +448,7 @@ export function TMDBSearch({
                         <p className="text-sm font-medium truncate" dir="auto">
                           {movie.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
                           {year && (
                             <span className="text-xs text-muted-foreground">
                               {year}
@@ -463,6 +465,19 @@ export function TMDBSearch({
                             </div>
                           )}
                         </div>
+                        {genres.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {genres.map((genre) => (
+                              <Badge
+                                key={genre}
+                                variant="secondary"
+                                className="h-4 px-1.5 text-[10px] font-normal"
+                              >
+                                {genre}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </button>
 

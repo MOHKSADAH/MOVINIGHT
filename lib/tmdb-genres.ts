@@ -21,3 +21,19 @@ export const TMDB_GENRES = [
 ] as const;
 
 export type TmdbGenre = (typeof TMDB_GENRES)[number];
+
+const GENRE_BY_ID = new Map<number, string>(
+  TMDB_GENRES.map((genre) => [genre.id, genre.name]),
+);
+
+/** Resolve TMDB search/discover `genre_ids` to display names (unknown ids dropped). */
+export function genreNamesFromIds(ids: number[], limit = 3): string[] {
+  const names: string[] = [];
+  for (const id of ids) {
+    const name = GENRE_BY_ID.get(id);
+    if (!name) continue;
+    names.push(name);
+    if (names.length >= limit) break;
+  }
+  return names;
+}
