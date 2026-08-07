@@ -1,6 +1,11 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getActiveUser, requireActiveUser } from "./lib/users";
+import {
+  CURATED_COLLECTIONS,
+  seedMovieToDoc,
+} from "./lib/seedCollections";
+import type { Id } from "./_generated/dataModel";
 
 export const getCollections = query({
   args: {},
@@ -137,5 +142,173 @@ export const removeMovieFromCollection = mutation({
   handler: async (ctx, { entryId }) => {
     await requireActiveUser(ctx);
     await ctx.db.delete(entryId);
+  },
+});
+
+/**
+ * Idempotent seed of curated themed collections for APP_OWNER_EMAIL.
+ * Creates missing collections, upserts/patches movies by tmdbId (fixes posters),
+ * and syncs each curated collection's movie membership to the catalog.
+ *
+ * npx convex run collections:seedCuratedCollections
+ */
+export const seedCuratedCollections = internalMutation({
+  args: {},
+  returns: v.object({
+    collectionsCreated: v.number(),
+    collectionsSkipped: v.number(),
+    moviesUpserted: v.number(),
+    moviesPatched: v.number(),
+    moviesLinked: v.number(),
+    moviesUnlinked: v.number(),
+  }),
+  handler: async (ctx) => {
+    const ownerEmail = process.env.APP_OWNER_EMAIL;
+    if (!ownerEmail) {
+      throw new Error("APP_OWNER_EMAIL is not set — cannot attribute seed rows");
+    }
+
+    const owner = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", ownerEmail))
+      .unique();
+    if (!owner || owner.deletedAt !== undefined) {
+      throw new Error(
+        `Owner user not found for ${ownerEmail}. Sign in as the owner once first.`,
+      );
+    }
+
+    const existingOwned = await ctx.db
+      .query("collections")
+      .withIndex("by_owner", (q) => q.eq("ownerId", owner._id))
+      .collect();
+    const idByName = new Map(
+      existingOwned.map((c) => [c.name.toLowerCase(), c._id] as const),
+    );
+
+    let collectionsCreated = 0;
+    let collectionsSkipped = 0;
+    let moviesUpserted = 0;
+    let moviesPatched = 0;
+    let moviesLinked = 0;
+    let moviesUnlinked = 0;
+    const now = Date.now();
+
+    for (const curated of CURATED_COLLECTIONS) {
+      const nameKey = curated.name.toLowerCase();
+      let collectionId = idByName.get(nameKey);
+      if (collectionId) {
+        collectionsSkipped += 1;
+        const existingCol = existingOwned.find((c) => c._id === collectionId);
+        if (
+          existingCol &&
+          existingCol.description !== curated.description
+        ) {
+          await ctx.db.patch(collectionId, {
+            description: curated.description,
+          });
+        }
+      } else {
+        collectionId = await ctx.db.insert("collections", {
+          name: curated.name,
+          description: curated.description,
+          ownerId: owner._id,
+          createdAt: now,
+        });
+        idByName.set(nameKey, collectionId);
+        collectionsCreated += 1;
+      }
+
+      const desiredMovieIds = new Set<Id<"movies">>();
+
+      for (const seedMovie of curated.movies) {
+        const doc = seedMovieToDoc(seedMovie);
+        const existingMovie = await ctx.db
+          .query("movies")
+          .withIndex("by_tmdbId", (q) => q.eq("tmdbId", doc.tmdbId))
+          .first();
+
+        let movieId: Id<"movies">;
+        if (existingMovie) {
+          movieId = existingMovie._id;
+          const patch: {
+            title?: string;
+            poster?: string;
+            overview?: string;
+            genres?: string[];
+            runtime?: number;
+            releaseYear?: number;
+            imdbRating?: number;
+          } = {};
+          if (existingMovie.poster !== doc.poster) patch.poster = doc.poster;
+          if (existingMovie.title !== doc.title) patch.title = doc.title;
+          if (existingMovie.overview !== doc.overview) {
+            patch.overview = doc.overview;
+          }
+          if (
+            JSON.stringify(existingMovie.genres) !== JSON.stringify(doc.genres)
+          ) {
+            patch.genres = doc.genres;
+          }
+          if (doc.runtime !== undefined && existingMovie.runtime !== doc.runtime) {
+            patch.runtime = doc.runtime;
+          }
+          if (existingMovie.releaseYear !== doc.releaseYear) {
+            patch.releaseYear = doc.releaseYear;
+          }
+          if (
+            doc.imdbRating !== undefined &&
+            existingMovie.imdbRating !== doc.imdbRating
+          ) {
+            patch.imdbRating = doc.imdbRating;
+          }
+          if (Object.keys(patch).length > 0) {
+            await ctx.db.patch(movieId, patch);
+            moviesPatched += 1;
+          }
+        } else {
+          movieId = await ctx.db.insert("movies", doc);
+          moviesUpserted += 1;
+        }
+        desiredMovieIds.add(movieId);
+
+        const link = await ctx.db
+          .query("collection_movies")
+          .withIndex("by_collection_movie", (q) =>
+            q.eq("collectionId", collectionId).eq("movieId", movieId),
+          )
+          .first();
+        if (!link) {
+          await ctx.db.insert("collection_movies", {
+            collectionId,
+            movieId,
+            addedBy: owner._id,
+            addedAt: now,
+          });
+          moviesLinked += 1;
+        }
+      }
+
+      // Drop stale links so wrong TMDB ids from earlier seeds disappear.
+      const currentLinks = await ctx.db
+        .query("collection_movies")
+        .withIndex("by_collection", (q) => q.eq("collectionId", collectionId))
+        .collect();
+      for (const link of currentLinks) {
+        if (!desiredMovieIds.has(link.movieId)) {
+          await ctx.db.delete(link._id);
+          moviesUnlinked += 1;
+        }
+      }
+    }
+
+    return {
+      collectionsCreated,
+      collectionsSkipped,
+      moviesUpserted,
+      moviesPatched,
+      moviesLinked,
+      moviesUnlinked,
+    };
   },
 });
