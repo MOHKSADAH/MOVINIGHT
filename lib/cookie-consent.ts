@@ -7,11 +7,13 @@ export type CookieConsent = {
   updatedAt: number;
 };
 
-export function getCookieConsent(): CookieConsent | null {
-  if (typeof window === "undefined") return null;
+/** Cached so useSyncExternalStore getSnapshot returns a stable reference. */
+let cachedRaw: string | null | undefined;
+let cachedConsent: CookieConsent | null = null;
+
+function parseConsent(raw: string | null): CookieConsent | null {
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
     const parsed = JSON.parse(raw) as CookieConsent;
     if (parsed?.necessary !== true || typeof parsed.optional !== "boolean") {
       return null;
@@ -22,17 +24,51 @@ export function getCookieConsent(): CookieConsent | null {
   }
 }
 
+function readConsentFromStorage(): CookieConsent | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedConsent;
+  cachedRaw = raw;
+  cachedConsent = parseConsent(raw);
+  return cachedConsent;
+}
+
+export function getCookieConsent(): CookieConsent | null {
+  return readConsentFromStorage();
+}
+
+/**
+ * Snapshot for useSyncExternalStore — must return the same reference when the
+ * underlying store value has not changed (React 19 requirement).
+ */
+export function getCookieConsentSnapshot(): CookieConsent | null {
+  return readConsentFromStorage();
+}
+
+export function getCookieConsentServerSnapshot(): CookieConsent | null {
+  return null;
+}
+
 export function setCookieConsent(consent: CookieConsent): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
+  const raw = JSON.stringify(consent);
+  localStorage.setItem(STORAGE_KEY, raw);
+  cachedRaw = raw;
+  cachedConsent = consent;
   window.dispatchEvent(new Event(EVENT));
 }
 
 export function subscribeCookieConsent(onStoreChange: () => void): () => void {
-  window.addEventListener(EVENT, onStoreChange);
-  window.addEventListener("storage", onStoreChange);
+  const handle = () => {
+    // Invalidate cache so the next snapshot read sees fresh storage
+    // (e.g. cross-tab `storage` events).
+    cachedRaw = undefined;
+    onStoreChange();
+  };
+  window.addEventListener(EVENT, handle);
+  window.addEventListener("storage", handle);
   return () => {
-    window.removeEventListener(EVENT, onStoreChange);
-    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(EVENT, handle);
+    window.removeEventListener("storage", handle);
   };
 }
 

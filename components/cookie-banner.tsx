@@ -1,49 +1,31 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
-  getCookieConsent,
+  getCookieConsentServerSnapshot,
+  getCookieConsentSnapshot,
   setCookieConsent,
   type CookieConsent,
   subscribeCookieConsent,
 } from "@/lib/cookie-consent";
 
-function getSnapshot(): CookieConsent | null {
-  return getCookieConsent();
-}
-
-function getServerSnapshot(): CookieConsent | null {
-  return null;
-}
-
 export function CookieBanner() {
   const t = useTranslations("cookies");
   const consent = useSyncExternalStore(
     subscribeCookieConsent,
-    getSnapshot,
-    getServerSnapshot,
+    getCookieConsentSnapshot,
+    getCookieConsentServerSnapshot,
   );
-  const [openPrefs, setOpenPrefs] = useState(false);
   const [optional, setOptional] = useState(false);
 
-  const visible = consent === null;
-
-  const prefs = useMemo(
-    () => ({
-      necessary: true as const,
-      optional: optional,
-    }),
-    [optional],
-  );
-
-  if (!visible && !openPrefs) return null;
+  // Hide once the user has saved a preference.
+  if (consent !== null) return null;
 
   const save = (next: CookieConsent) => {
     setCookieConsent(next);
-    setOpenPrefs(false);
   };
 
   return (
@@ -57,28 +39,24 @@ export function CookieBanner() {
               {t("cookieManage")}
             </Link>
           </p>
-          {(visible || openPrefs) && (
-            <label className="mt-2 flex items-center gap-2 text-muted-foreground">
-              <input
-                type="checkbox"
-                checked
-                disabled
-                className="size-4 accent-primary"
-              />
-              {t("cookieNecessary")}
-            </label>
-          )}
-          {(visible || openPrefs) && (
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={optional || consent?.optional === true}
-                onChange={(e) => setOptional(e.target.checked)}
-                className="size-4 accent-primary"
-              />
-              {t("cookieOptional")}
-            </label>
-          )}
+          <label className="mt-2 flex items-center gap-2 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              className="size-4 accent-primary"
+            />
+            {t("cookieNecessary")}
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={optional}
+              onChange={(e) => setOptional(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            {t("cookieOptional")}
+          </label>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button
@@ -97,7 +75,7 @@ export function CookieBanner() {
             onClick={() =>
               save({
                 necessary: true,
-                optional: prefs.optional || consent?.optional === true,
+                optional,
                 updatedAt: Date.now(),
               })
             }
