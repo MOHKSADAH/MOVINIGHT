@@ -20,7 +20,7 @@ export const sendReminder = internalAction({
     }
 
     const from =
-      process.env.AUTH_RESEND_FROM ?? "Movie Night <onboarding@resend.dev>";
+      process.env.AUTH_RESEND_FROM ?? "MOVINIGHT <onboarding@resend.dev>";
     const when = new Date(payload.date).toLocaleString("en-US", {
       weekday: "long",
       month: "long",
@@ -43,10 +43,10 @@ export const sendReminder = internalAction({
       body: JSON.stringify({
         from,
         to: payload.emails,
-        subject: `Movie night tomorrow: ${payload.title}`,
+        subject: `MOVINIGHT tomorrow: ${payload.title}`,
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <h2 style="margin:0 0 8px">Movie Night</h2>
+            <h2 style="margin:0 0 8px">MOVINIGHT</h2>
             <p style="color:#666;margin:0 0 16px">Reminder from ${payload.hostName}</p>
             <p style="margin:0 0 8px"><strong>${payload.title}</strong></p>
             <p style="margin:0 0 24px">${when}</p>

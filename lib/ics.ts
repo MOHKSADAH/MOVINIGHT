@@ -1,4 +1,4 @@
-/** Build a minimal iCalendar document for movie nights. */
+/** Build a minimal iCalendar document for MOVINIGHTs. */
 export function buildNightsIcs(
   nights: Array<{
     _id: string;
@@ -12,7 +12,7 @@ export function buildNightsIcs(
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Movie Night//EN",
+    "PRODID:-//MOVINIGHT//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -33,7 +33,7 @@ export function buildNightsIcs(
       `DTEND:${end}`,
       `SUMMARY:${summary}`,
       `URL:${url}`,
-      `DESCRIPTION:${escapeIcs(`Movie Night · ${url}`)}`,
+      `DESCRIPTION:${escapeIcs(`MOVINIGHT · ${url}`)}`,
       "END:VEVENT",
     );
   }

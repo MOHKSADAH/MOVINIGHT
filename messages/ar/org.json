@@ -1,4 +1,4 @@
-{
+﻿{
   "joinTitle": "انضم لطاقمك",
   "joinSubtitle": "أنشئ منظمة لأصدقائك، أو أدخل رمزاً للانضمام.",
   "createTab": "إنشاء",
@@ -36,7 +36,7 @@
   "roleOwner": "مالك",
   "roleMember": "عضو",
   "inviteTitle": "لديك دعوة",
-  "inviteSubtitle": "انضم إلى {orgName} في Movie Night",
+  "inviteSubtitle": "انضم إلى {orgName} في مـوفي نـايت",
   "inviteAccept": "قبول الدعوة",
   "inviteExpired": "هذه الدعوة لم تعد صالحة.",
   "inviteNeedLogin": "سجّل الدخول بالبريد المدعو للقبول.",

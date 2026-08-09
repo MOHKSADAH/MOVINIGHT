@@ -122,7 +122,7 @@ export const create = mutation({
       {
         inviteId,
         orgName: org.name,
-        inviterName: user.name ?? "A Movie Night member",
+        inviterName: user.name ?? "A MOVINIGHT member",
         email,
         token,
       },
@@ -211,7 +211,7 @@ export const sendInviteEmail = internalAction({
     const inviteUrl = `${siteUrl}/invite/${args.token}`;
 
     const from =
-      process.env.AUTH_RESEND_FROM ?? "Movie Night <onboarding@resend.dev>";
+      process.env.AUTH_RESEND_FROM ?? "MOVINIGHT <onboarding@resend.dev>";
 
     const { subject, html, text } = renderInviteEmail({
       orgName: args.orgName,

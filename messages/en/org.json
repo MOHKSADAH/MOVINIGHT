@@ -1,4 +1,4 @@
-{
+﻿{
   "joinTitle": "Join your crew",
   "joinSubtitle": "Create an organization for your friends, or enter a code to join one.",
   "createTab": "Create",
@@ -36,7 +36,7 @@
   "roleOwner": "Owner",
   "roleMember": "Member",
   "inviteTitle": "You're invited",
-  "inviteSubtitle": "Join {orgName} on Movie Night",
+  "inviteSubtitle": "Join {orgName} on MOVINIGHT",
   "inviteAccept": "Accept invitation",
   "inviteExpired": "This invitation is no longer valid.",
   "inviteNeedLogin": "Sign in with the invited email to accept.",

@@ -30,7 +30,7 @@ export function renderInviteEmail({
   inviteUrl,
   expiresInDays,
 }: InviteEmailParams): RenderedEmail {
-  const subject = `Join ${orgName} on Movie Night`;
+  const subject = `Join ${orgName} on MOVINIGHT`;
   const safeOrg = escapeHtml(orgName);
   const safeInviter = escapeHtml(inviterName);
 
@@ -47,7 +47,7 @@ export function renderInviteEmail({
 <td align="center" style="padding:40px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:${INK.card};border:1px solid ${INK.border};border-radius:12px;">
 <tr><td style="padding:32px 28px;">
-<p style="margin:0 0 12px;font-family:system-ui,sans-serif;font-size:13px;color:${INK.muted};">Movie Night</p>
+<p style="margin:0 0 12px;font-family:system-ui,sans-serif;font-size:13px;color:${INK.muted};">MOVINIGHT</p>
 <h1 style="margin:0 0 16px;font-family:system-ui,sans-serif;font-size:22px;color:${INK.text};">You're invited</h1>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:${INK.muted};">
 <strong style="color:${INK.text};">${safeInviter}</strong> invited you to join
@@ -69,7 +69,7 @@ This link expires in ${expiresInDays} days. If you didn't expect this, you can i
 </body>
 </html>`;
 
-  const text = `${inviterName} invited you to join ${orgName} on Movie Night.
+  const text = `${inviterName} invited you to join ${orgName} on MOVINIGHT.
 
 Accept: ${inviteUrl}
 

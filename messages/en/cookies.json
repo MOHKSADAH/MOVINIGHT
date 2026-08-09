@@ -1,6 +1,6 @@
-{
+﻿{
   "cookieBannerTitle": "Cookies",
-  "cookieBannerBody": "We use necessary cookies to keep you signed in and run Movie Night. Optional cookies are off unless you allow them.",
+  "cookieBannerBody": "We use necessary cookies to keep you signed in and run MOVINIGHT. Optional cookies are off unless you allow them.",
   "cookieNecessary": "Necessary",
   "cookieOptional": "Optional",
   "cookieAcceptAll": "Accept all",
@@ -21,8 +21,8 @@
   "faqRightsA": "Under applicable privacy laws including Saudi PDPL principles we follow, you can request access, correction, or deletion of your personal data. You can delete your account in profile settings or email us.",
   "faqTermsQ": "Why do I need to accept Terms?",
   "faqTermsA": "We ask you to accept the Terms of Service and Privacy Policy before creating or joining an organization so everyone understands how the app and data work.",
-  "metaFaqTitle": "FAQ · Movie Night",
-  "metaFaqDescription": "Organizations, invites, cookies, and privacy questions for Movie Night.",
+  "metaFaqTitle": "FAQ · MOVINIGHT",
+  "metaFaqDescription": "Organizations, invites, cookies, and privacy questions for MOVINIGHT.",
   "privacyCookiesTitle": "Cookies",
   "privacyCookiesBody": "We use necessary cookies for sign-in and security. Optional cookies (for example analytics) are disabled until you consent via the cookie banner. You can change preferences anytime.",
   "privacyOrgsTitle": "Organizations",
