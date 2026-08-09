@@ -8,8 +8,10 @@ import {
 } from "./lib/users";
 import {
   findOrgByCode,
+  getEffectiveMembership,
   getMembership,
-  listMembershipsForUser,
+  isEffectiveMembership,
+  listEffectiveMembershipsForUser,
   requireOrgMembership,
   requireOwnerMembership,
 } from "./lib/orgs";
@@ -35,7 +37,7 @@ export const listMine = query({
   returns: v.array(orgSummaryValidator),
   handler: async (ctx) => {
     const user = await requireActiveUser(ctx);
-    const memberships = await listMembershipsForUser(ctx, user._id);
+    const memberships = await listEffectiveMembershipsForUser(ctx, user._id);
     const results = [];
     for (const membership of memberships) {
       const org = await ctx.db.get(membership.orgId);
@@ -59,7 +61,11 @@ export const getActive = query({
   handler: async (ctx) => {
     const user = await requireActiveUser(ctx);
     if (!user.activeOrgId) return null;
-    const membership = await getMembership(ctx, user._id, user.activeOrgId);
+    const membership = await getEffectiveMembership(
+      ctx,
+      user._id,
+      user.activeOrgId,
+    );
     if (!membership) return null;
     const org = await ctx.db.get(user.activeOrgId);
     if (!org) return null;
@@ -83,10 +89,10 @@ export const needsOrgGate = query({
   }),
   handler: async (ctx) => {
     const user = await requireActiveUser(ctx);
-    const memberships = await listMembershipsForUser(ctx, user._id);
     return {
       needsTerms: !hasAcceptedCurrentTerms(user),
-      needsOrg: memberships.length === 0,
+      // Explicit create / join / invite only — seeded weebs membership is not enough.
+      needsOrg: user.orgSetupCompletedAt === undefined,
       needsOnboarding: !user.name?.trim(),
     };
   },
@@ -130,9 +136,13 @@ export const create = mutation({
       userId: user._id,
       role: "owner",
       joinedAt: now,
+      source: "create",
     });
 
-    await ctx.db.patch(user._id, { activeOrgId: orgId });
+    await ctx.db.patch(user._id, {
+      activeOrgId: orgId,
+      orgSetupCompletedAt: now,
+    });
     return orgId;
   },
 });
@@ -151,16 +161,27 @@ export const joinByCode = mutation({
     if (!org) throw new Error("No organization found with that code");
 
     const existing = await getMembership(ctx, user._id, org._id);
+    const now = Date.now();
     if (!existing) {
       await ctx.db.insert("organizationMembers", {
         orgId: org._id,
         userId: user._id,
         role: "member",
-        joinedAt: Date.now(),
+        joinedAt: now,
+        source: "code",
+      });
+    } else if (!isEffectiveMembership(existing)) {
+      // Upgrade migration seed (or legacy unmarked seed) into a real join.
+      await ctx.db.patch(existing._id, {
+        source: "code",
+        joinedAt: now,
       });
     }
 
-    await ctx.db.patch(user._id, { activeOrgId: org._id });
+    await ctx.db.patch(user._id, {
+      activeOrgId: org._id,
+      orgSetupCompletedAt: now,
+    });
     return org._id;
   },
 });
@@ -248,6 +269,7 @@ export const listMembers = query({
 
     const rows = [];
     for (const membership of memberships) {
+      if (!isEffectiveMembership(membership)) continue;
       const member = await ctx.db.get(membership.userId);
       if (!member || member.deletedAt !== undefined) continue;
       rows.push({
@@ -290,7 +312,11 @@ export const removeMember = mutation({
 
     const memberUser = await ctx.db.get(args.userId);
     if (memberUser?.activeOrgId === args.orgId) {
-      await ctx.db.patch(args.userId, { activeOrgId: undefined });
+      const remaining = await listEffectiveMembershipsForUser(ctx, args.userId);
+      await ctx.db.patch(args.userId, {
+        activeOrgId: remaining[0]?.orgId,
+        ...(remaining.length === 0 ? { orgSetupCompletedAt: undefined } : {}),
+      });
     }
     return null;
   },
@@ -304,12 +330,14 @@ export const leave = mutation({
     const membership = await getMembership(ctx, user._id, args.orgId);
     if (!membership) throw new Error("Not a member of this organization");
 
-    if (membership.role === "owner") {
+    if (membership.role === "owner" && isEffectiveMembership(membership)) {
       const members = await ctx.db
         .query("organizationMembers")
         .withIndex("by_org", (q) => q.eq("orgId", args.orgId))
         .collect();
-      const owners = members.filter((m) => m.role === "owner");
+      const owners = members.filter(
+        (m) => m.role === "owner" && isEffectiveMembership(m),
+      );
       if (owners.length <= 1) {
         throw new Error(
           "You are the only owner — transfer ownership or delete the org first",
@@ -320,9 +348,12 @@ export const leave = mutation({
     await ctx.db.delete(membership._id);
 
     if (user.activeOrgId === args.orgId) {
-      const remaining = await listMembershipsForUser(ctx, user._id);
+      const remaining = await listEffectiveMembershipsForUser(ctx, user._id);
       const next: Id<"organizations"> | undefined = remaining[0]?.orgId;
-      await ctx.db.patch(user._id, { activeOrgId: next });
+      await ctx.db.patch(user._id, {
+        activeOrgId: next,
+        ...(remaining.length === 0 ? { orgSetupCompletedAt: undefined } : {}),
+      });
     }
     return null;
   },

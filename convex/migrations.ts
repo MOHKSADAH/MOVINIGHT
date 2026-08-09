@@ -7,16 +7,63 @@ import {
   DEFAULT_ORG_NAME,
 } from "./lib/orgConstants";
 import { isAppOwner, requireAppOwner } from "./lib/users";
-import { findOrgByCode } from "./lib/orgs";
+import {
+  findOrgByCode,
+  isEffectiveMembership,
+  listEffectiveMembershipsForUser,
+} from "./lib/orgs";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 export const migrations = new Migrations(components.migrations);
 
+/** Mark weebs migration rows as seed and point activeOrg away from them. */
+async function demoteSeedWeebsMemberships(
+  ctx: MutationCtx,
+  orgId: Id<"organizations">,
+): Promise<{ markedSeed: number; activeOrgFixed: number }> {
+  const memberships = await ctx.db
+    .query("organizationMembers")
+    .withIndex("by_org", (q) => q.eq("orgId", orgId))
+    .collect();
+
+  let markedSeed = 0;
+  let activeOrgFixed = 0;
+
+  for (const membership of memberships) {
+    // Legacy rows have no source; treat them as seed until an explicit join.
+    if (membership.source === undefined) {
+      await ctx.db.patch(membership._id, { source: "seed" });
+      markedSeed += 1;
+    }
+  }
+
+  // Re-read after patches so active-org fix sees source: "seed".
+  const refreshed = await ctx.db
+    .query("organizationMembers")
+    .withIndex("by_org", (q) => q.eq("orgId", orgId))
+    .collect();
+
+  for (const membership of refreshed) {
+    if (isEffectiveMembership(membership)) continue;
+    const user = await ctx.db.get(membership.userId);
+    if (!user || user.activeOrgId !== orgId) continue;
+
+    const remaining = await listEffectiveMembershipsForUser(ctx, user._id);
+    await ctx.db.patch(user._id, {
+      activeOrgId: remaining[0]?.orgId,
+    });
+    activeOrgFixed += 1;
+  }
+
+  return { markedSeed, activeOrgFixed };
+}
+
 async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
   let org = await findOrgByCode(ctx, DEFAULT_ORG_CODE);
   const users = await ctx.db.query("users").collect();
   const activeUsers = users.filter((u) => u.deletedAt === undefined);
+  const createdOrg = !org;
 
   if (!org) {
     const owner =
@@ -36,29 +83,43 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
   const orgId = org._id;
   let membersAdded = 0;
 
-  for (const user of activeUsers) {
-    const existing = await ctx.db
-      .query("organizationMembers")
-      .withIndex("by_org_and_user", (q) =>
-        q.eq("orgId", orgId).eq("userId", user._id),
-      )
-      .unique();
-    if (!existing) {
-      await ctx.db.insert("organizationMembers", {
-        orgId,
-        userId: user._id,
-        role: isAppOwner(user.email) ? "owner" : "member",
-        joinedAt: Date.now(),
-      });
-      membersAdded += 1;
-    } else if (isAppOwner(user.email) && existing.role !== "owner") {
-      await ctx.db.patch(existing._id, { role: "owner" });
+  // Only auto-add memberships the first time weebs is created. Later runs must
+  // not silently enroll new signups — they have to join/create explicitly.
+  if (createdOrg) {
+    for (const user of activeUsers) {
+      const existing = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_org_and_user", (q) =>
+          q.eq("orgId", orgId).eq("userId", user._id),
+        )
+        .unique();
+      if (!existing) {
+        await ctx.db.insert("organizationMembers", {
+          orgId,
+          userId: user._id,
+          role: isAppOwner(user.email) ? "owner" : "member",
+          joinedAt: Date.now(),
+          source: "seed",
+        });
+        membersAdded += 1;
+      }
+      // Do not set activeOrgId — seed membership is not usable until join-by-code.
     }
-
-    if (!user.activeOrgId) {
-      await ctx.db.patch(user._id, { activeOrgId: orgId });
+  } else {
+    for (const user of activeUsers) {
+      const existing = await ctx.db
+        .query("organizationMembers")
+        .withIndex("by_org_and_user", (q) =>
+          q.eq("orgId", orgId).eq("userId", user._id),
+        )
+        .unique();
+      if (existing && isAppOwner(user.email) && existing.role !== "owner") {
+        await ctx.db.patch(existing._id, { role: "owner" });
+      }
     }
   }
+
+  const demoted = await demoteSeedWeebsMemberships(ctx, orgId);
 
   const patched = {
     watchlist: 0,
@@ -99,7 +160,13 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
     }
   }
 
-  return { orgId, membersAdded, patched };
+  return {
+    orgId,
+    membersAdded,
+    markedSeed: demoted.markedSeed,
+    activeOrgFixed: demoted.activeOrgFixed,
+    patched,
+  };
 }
 
 /** Seed weebs, memberships, and backfill orgId on domain tables. Idempotent. */
@@ -108,6 +175,8 @@ export const seedWeebsAndBackfill = internalMutation({
   returns: v.object({
     orgId: v.id("organizations"),
     membersAdded: v.number(),
+    markedSeed: v.number(),
+    activeOrgFixed: v.number(),
     patched: v.object({
       watchlist: v.number(),
       nights: v.number(),
@@ -125,6 +194,8 @@ export const runBootstrap = mutation({
   returns: v.object({
     orgId: v.id("organizations"),
     membersAdded: v.number(),
+    markedSeed: v.number(),
+    activeOrgFixed: v.number(),
     patched: v.object({
       watchlist: v.number(),
       nights: v.number(),

@@ -78,6 +78,7 @@ export async function deleteAccount(
     emailVerificationTime: undefined,
     phoneVerificationTime: undefined,
     activeOrgId: undefined,
+    orgSetupCompletedAt: undefined,
     termsAcceptedAt: undefined,
     privacyAcceptedAt: undefined,
     termsVersion: undefined,

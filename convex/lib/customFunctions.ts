@@ -10,7 +10,7 @@ import {
   requireTermsAccepted,
 } from "./users";
 import {
-  getMembership,
+  getEffectiveMembership,
   requireOrgMembership,
   requireOwnerMembership,
 } from "./orgs";
@@ -124,7 +124,11 @@ export async function getActiveOrgContext(
 ): Promise<OrgContext | null> {
   const user = await getActiveUser(ctx);
   if (!user?.activeOrgId) return null;
-  const membership = await getMembership(ctx, user._id, user.activeOrgId);
+  const membership = await getEffectiveMembership(
+    ctx,
+    user._id,
+    user.activeOrgId,
+  );
   if (!membership) return null;
   const org = await ctx.db.get(user.activeOrgId);
   if (!org) return null;

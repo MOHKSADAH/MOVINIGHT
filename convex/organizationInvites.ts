@@ -9,6 +9,7 @@ import {
 import { requireActiveUser, requireTermsAccepted } from "./lib/users";
 import {
   getMembership,
+  isEffectiveMembership,
   requireOrgMembership,
   requireOwnerMembership,
 } from "./lib/orgs";
@@ -174,17 +175,27 @@ export const accept = mutation({
     }
 
     const existing = await getMembership(ctx, user._id, invite.orgId);
+    const now = Date.now();
     if (!existing) {
       await ctx.db.insert("organizationMembers", {
         orgId: invite.orgId,
         userId: user._id,
         role: "member",
-        joinedAt: Date.now(),
+        joinedAt: now,
+        source: "invite",
+      });
+    } else if (!isEffectiveMembership(existing)) {
+      await ctx.db.patch(existing._id, {
+        source: "invite",
+        joinedAt: now,
       });
     }
 
     await ctx.db.patch(invite._id, { status: "accepted" });
-    await ctx.db.patch(user._id, { activeOrgId: invite.orgId });
+    await ctx.db.patch(user._id, {
+      activeOrgId: invite.orgId,
+      orgSetupCompletedAt: now,
+    });
     return invite.orgId;
   },
 });

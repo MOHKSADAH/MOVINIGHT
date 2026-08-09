@@ -3,6 +3,13 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
+/** Seeded weebs rows do not count until the user joins with the code (or invite). */
+export function isEffectiveMembership(
+  membership: Doc<"organizationMembers">,
+): boolean {
+  return membership.source !== "seed";
+}
+
 export async function getMembership(
   ctx: AnyCtx,
   userId: Id<"users">,
@@ -16,6 +23,16 @@ export async function getMembership(
     .unique();
 }
 
+export async function getEffectiveMembership(
+  ctx: AnyCtx,
+  userId: Id<"users">,
+  orgId: Id<"organizations">,
+): Promise<Doc<"organizationMembers"> | null> {
+  const membership = await getMembership(ctx, userId, orgId);
+  if (!membership || !isEffectiveMembership(membership)) return null;
+  return membership;
+}
+
 export async function requireOrgMembership(
   ctx: AnyCtx,
   userId: Id<"users">,
@@ -27,7 +44,7 @@ export async function requireOrgMembership(
   const org = await ctx.db.get(orgId);
   if (!org) throw new Error("Organization not found");
 
-  const membership = await getMembership(ctx, userId, orgId);
+  const membership = await getEffectiveMembership(ctx, userId, orgId);
   if (!membership) throw new Error("Not a member of this organization");
 
   return { org, membership };
@@ -56,6 +73,14 @@ export async function listMembershipsForUser(
     .query("organizationMembers")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
+}
+
+export async function listEffectiveMembershipsForUser(
+  ctx: AnyCtx,
+  userId: Id<"users">,
+): Promise<Doc<"organizationMembers">[]> {
+  const memberships = await listMembershipsForUser(ctx, userId);
+  return memberships.filter(isEffectiveMembership);
 }
 
 export async function findOrgByCode(

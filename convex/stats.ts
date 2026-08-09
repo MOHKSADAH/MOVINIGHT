@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getActiveOrgContext } from "./lib/customFunctions";
+import { isEffectiveMembership } from "./lib/orgs";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
@@ -30,10 +31,12 @@ async function loadOrgStatsBundle(
   ctx: QueryCtx,
   orgId: Id<"organizations">,
 ) {
-  const memberships = await ctx.db
-    .query("organizationMembers")
-    .withIndex("by_org", (q) => q.eq("orgId", orgId))
-    .collect();
+  const memberships = (
+    await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect()
+  ).filter(isEffectiveMembership);
   const users = (
     await Promise.all(memberships.map((m) => ctx.db.get(m.userId)))
   ).filter((u): u is Doc<"users"> => !!u && u.deletedAt === undefined);
