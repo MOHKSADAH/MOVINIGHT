@@ -1,0 +1,40 @@
+# Lint + TypeScript checks for the Next.js app and Convex backend.
+# React Doctor stays advisory in its own workflow; this gate must pass.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck app
+        run: npm run typecheck
+
+      - name: Typecheck Convex
+        run: npm run typecheck:convex
