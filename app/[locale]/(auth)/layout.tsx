@@ -1,8 +1,9 @@
 import { Link } from "@/i18n/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SITE_CONTACT_EMAIL, SITE_CONTACT_MAILTO } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 export default async function AuthLayout({
   children,
@@ -10,6 +11,8 @@ export default async function AuthLayout({
   children: React.ReactNode;
 }) {
   const t = await getTranslations("auth");
+  const locale = await getLocale();
+  const isArabic = locale === "ar";
 
   return (
     <div className="auth-stage relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -26,7 +29,14 @@ export default async function AuthLayout({
             <LanguageSwitcher compact />
           </div>
           <BrandLogo className="h-20 sm:h-24" priority />
-          <p className="mt-4 max-w-[22rem] font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          <p
+            className={cn(
+              "mt-4 max-w-[22rem] text-muted-foreground",
+              isArabic
+                ? "text-sm font-medium leading-relaxed tracking-normal"
+                : "font-mono text-[11px] uppercase tracking-[0.22em]",
+            )}
+          >
             {t("tagline")}
           </p>
         </header>

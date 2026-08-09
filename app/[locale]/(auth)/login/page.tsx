@@ -154,8 +154,11 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleEmailSubmit} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="email">
+              <div className="space-y-2.5">
+                <label
+                  className="mb-0.5 block text-sm font-medium leading-snug"
+                  htmlFor="email"
+                >
                   {t("emailLabel")}
                 </label>
                 <Input
@@ -179,8 +182,11 @@ export default function LoginPage() {
 
         {step === "code" && (
           <form onSubmit={handleCodeSubmit} className="space-y-3 pt-1">
-            <div className="space-y-2">
-              <label className="text-sm font-medium block pt-1" htmlFor="code">
+            <div className="space-y-2.5">
+              <label
+                className="mb-0.5 block text-sm font-medium leading-snug"
+                htmlFor="code"
+              >
                 {t("sixDigitCodeLabel")}
               </label>
               <Input
