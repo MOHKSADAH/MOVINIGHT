@@ -35,7 +35,10 @@ export function CookieBanner() {
           <p className="font-medium">{t("cookieBannerTitle")}</p>
           <p className="text-muted-foreground leading-relaxed">
             {t("cookieBannerBody")}{" "}
-            <Link href="/faq" className="underline underline-offset-2">
+            <Link
+              href="/faq"
+              className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
               {t("cookieManage")}
             </Link>
           </p>

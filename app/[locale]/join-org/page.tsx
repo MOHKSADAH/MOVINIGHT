@@ -111,11 +111,17 @@ export default function JoinOrgPage() {
       />
       <span>
         {t("termsLabel")}{" "}
-        <Link href="/terms" className="underline underline-offset-2">
+        <Link
+          href="/terms"
+          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
           Terms
         </Link>{" "}
         ·{" "}
-        <Link href="/privacy" className="underline underline-offset-2">
+        <Link
+          href="/privacy"
+          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
           Privacy
         </Link>
       </span>

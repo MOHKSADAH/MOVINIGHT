@@ -226,11 +226,17 @@ export default function LoginPage() {
 
       <p className="text-center text-[11px] text-muted-foreground leading-relaxed px-2">
         {t("agreePrefix")}{" "}
-        <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+        <Link
+          href="/terms"
+          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
           {t("termsLink")}
         </Link>{" "}
         {t("and")}{" "}
-        <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+        <Link
+          href="/privacy"
+          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
           {t("privacyLink")}
         </Link>
         .

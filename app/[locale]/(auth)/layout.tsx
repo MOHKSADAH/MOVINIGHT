@@ -50,13 +50,22 @@ export default async function AuthLayout({
             aria-label={t("legalNavAriaLabel")}
             className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
           >
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
+            <Link
+              href="/privacy"
+              className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
               {t("privacyPolicy")}
             </Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">
+            <Link
+              href="/terms"
+              className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
               {t("termsOfService")}
             </Link>
-            <Link href="/about" className="hover:text-foreground transition-colors">
+            <Link
+              href="/about"
+              className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
               {t("about")}
             </Link>
           </nav>
@@ -64,7 +73,7 @@ export default async function AuthLayout({
             {t("contactPrefix")}{" "}
             <a
               href={SITE_CONTACT_MAILTO}
-              className="underline-offset-2 hover:text-foreground hover:underline"
+              className="text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
             >
               {SITE_CONTACT_EMAIL}
             </a>
