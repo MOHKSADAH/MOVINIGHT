@@ -18,6 +18,8 @@ const namespaces = [
   "hallOfFame",
   "legal",
   "empty",
+  "org",
+  "cookies",
 ] as const;
 
 export default getRequestConfig(async ({ requestLocale }) => {

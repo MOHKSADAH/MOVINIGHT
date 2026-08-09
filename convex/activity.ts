@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser } from "./lib/users";
+import { getActiveOrgContext } from "./lib/customFunctions";
 
 const activityItemValidator = v.object({
   id: v.string(),
@@ -26,13 +26,24 @@ export const getRecentActivity = query({
   args: { limit: v.optional(v.number()) },
   returns: v.array(activityItemValidator),
   handler: async (ctx, { limit = 12 }) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
     const [watchlist, watched, nights] = await Promise.all([
-      ctx.db.query("watchlist_entries").collect(),
-      ctx.db.query("watched_entries").order("desc").take(40),
-      ctx.db.query("movie_nights").order("desc").take(20),
+      ctx.db
+        .query("watchlist_entries")
+        .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+        .collect(),
+      ctx.db
+        .query("watched_entries")
+        .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+        .order("desc")
+        .take(40),
+      ctx.db
+        .query("movie_nights")
+        .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+        .order("desc")
+        .take(20),
     ]);
 
     type Activity = {

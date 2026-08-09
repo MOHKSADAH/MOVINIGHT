@@ -1,6 +1,11 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser, requireActiveUser } from "./lib/users";
+import {
+  getActiveOrgContext,
+  requireActiveOrgContext,
+} from "./lib/customFunctions";
+import { findOrgByCode } from "./lib/orgs";
+import { DEFAULT_ORG_CODE } from "./lib/orgConstants";
 import {
   CURATED_COLLECTIONS,
   seedMovieToDoc,
@@ -10,10 +15,13 @@ import type { Id } from "./_generated/dataModel";
 export const getCollections = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
-    const collections = await ctx.db.query("collections").collect();
+    const collections = await ctx.db
+      .query("collections")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     return Promise.all(
       collections
         .sort((a, b) => b.createdAt - a.createdAt)
@@ -36,7 +44,7 @@ export const getCollections = query({
             ownerName: owner?.name ?? "Unknown",
             movieCount: entries.length,
             posters,
-            isOwner: c.ownerId === userId,
+            isOwner: c.ownerId === orgCtx.user._id,
           };
         }),
     );
@@ -46,11 +54,12 @@ export const getCollections = query({
 export const getCollection = query({
   args: { collectionId: v.id("collections") },
   handler: async (ctx, { collectionId }) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
 
     const collection = await ctx.db.get(collectionId);
     if (!collection) return null;
+    if (collection.orgId && collection.orgId !== orgCtx.orgId) return null;
 
     const [owner, entries] = await Promise.all([
       ctx.db.get(collection.ownerId),
@@ -72,7 +81,7 @@ export const getCollection = query({
     return {
       ...collection,
       ownerName: owner?.name ?? "Unknown",
-      isOwner: collection.ownerId === userId,
+      isOwner: collection.ownerId === orgCtx.user._id,
       movies,
     };
   },
@@ -84,11 +93,12 @@ export const createCollection = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
     return await ctx.db.insert("collections", {
+      orgId,
       name: args.name,
       description: args.description,
-      ownerId: userId,
+      ownerId: user._id,
       createdAt: Date.now(),
     });
   },
@@ -97,10 +107,14 @@ export const createCollection = mutation({
 export const deleteCollection = mutation({
   args: { collectionId: v.id("collections") },
   handler: async (ctx, { collectionId }) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
 
     const collection = await ctx.db.get(collectionId);
-    if (!collection || collection.ownerId !== userId)
+    if (
+      !collection ||
+      collection.ownerId !== user._id ||
+      (collection.orgId && collection.orgId !== orgId)
+    )
       throw new Error("Not authorized");
 
     const entries = await ctx.db
@@ -118,7 +132,11 @@ export const addMovieToCollection = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, args) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
+    const collection = await ctx.db.get(args.collectionId);
+    if (!collection || (collection.orgId && collection.orgId !== orgId)) {
+      throw new Error("Collection not found");
+    }
 
     const existing = await ctx.db
       .query("collection_movies")
@@ -131,7 +149,7 @@ export const addMovieToCollection = mutation({
     return await ctx.db.insert("collection_movies", {
       collectionId: args.collectionId,
       movieId: args.movieId,
-      addedBy: userId,
+      addedBy: user._id,
       addedAt: Date.now(),
     });
   },
@@ -140,7 +158,7 @@ export const addMovieToCollection = mutation({
 export const removeMovieFromCollection = mutation({
   args: { entryId: v.id("collection_movies") },
   handler: async (ctx, { entryId }) => {
-    await requireActiveUser(ctx);
+    await requireActiveOrgContext(ctx);
     await ctx.db.delete(entryId);
   },
 });
@@ -209,7 +227,18 @@ export const seedCuratedCollections = internalMutation({
           });
         }
       } else {
+        const weebs =
+          (await findOrgByCode(ctx, DEFAULT_ORG_CODE)) ??
+          (owner.activeOrgId
+            ? await ctx.db.get(owner.activeOrgId)
+            : null);
+        if (!weebs) {
+          throw new Error(
+            "No organization to attach curated collections — run migrations.runBootstrap first",
+          );
+        }
         collectionId = await ctx.db.insert("collections", {
+          orgId: weebs._id,
           name: curated.name,
           description: curated.description,
           ownerId: owner._id,

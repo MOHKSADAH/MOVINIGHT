@@ -1,6 +1,12 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser, isAppOwner, requireActiveUser } from "./lib/users";
+import { isAppOwner } from "./lib/users";
+import {
+  getActiveOrgContext,
+  requireActiveOrgContext,
+} from "./lib/customFunctions";
+import { findOrgByCode } from "./lib/orgs";
+import { DEFAULT_ORG_CODE } from "./lib/orgConstants";
 import { EASTERN_PROVINCE_RESTAURANTS } from "./lib/easternProvinceRestaurants";
 
 const cityValidator = v.union(
@@ -12,20 +18,23 @@ const cityValidator = v.union(
 export const getRestaurants = query({
   args: {},
   handler: async (ctx) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
-    const callerIsOwner = isAppOwner(caller.email);
+    const callerIsOwner = isAppOwner(orgCtx.user.email);
 
-    const restaurants = await ctx.db.query("restaurants").collect();
+    const restaurants = await ctx.db
+      .query("restaurants")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     const enriched = await Promise.all(
       restaurants.map(async (r) => {
         const addedByUser = await ctx.db.get(r.addedBy);
         return {
           ...r,
           addedByName: addedByUser?.name ?? "Unknown",
-          hasUpvoted: r.upvotes.includes(caller._id),
-          isOwner: callerIsOwner || r.addedBy === caller._id,
+          hasUpvoted: r.upvotes.includes(orgCtx.user._id),
+          isOwner: callerIsOwner || r.addedBy === orgCtx.user._id,
         };
       }),
     );
@@ -44,10 +53,11 @@ export const addRestaurant = mutation({
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
     return await ctx.db.insert("restaurants", {
       ...args,
-      addedBy: userId,
+      orgId,
+      addedBy: user._id,
       addedAt: Date.now(),
       upvotes: [],
     });
@@ -57,7 +67,12 @@ export const addRestaurant = mutation({
 export const deleteRestaurant = mutation({
   args: { restaurantId: v.id("restaurants") },
   handler: async (ctx, { restaurantId }) => {
-    await requireActiveUser(ctx);
+    const { orgId } = await requireActiveOrgContext(ctx);
+    const restaurant = await ctx.db.get(restaurantId);
+    if (!restaurant) throw new Error("Not found");
+    if (restaurant.orgId && restaurant.orgId !== orgId) {
+      throw new Error("Restaurant belongs to another organization");
+    }
     await ctx.db.delete(restaurantId);
   },
 });
@@ -65,16 +80,19 @@ export const deleteRestaurant = mutation({
 export const toggleUpvote = mutation({
   args: { restaurantId: v.id("restaurants") },
   handler: async (ctx, { restaurantId }) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
 
     const restaurant = await ctx.db.get(restaurantId);
     if (!restaurant) throw new Error("Not found");
+    if (restaurant.orgId && restaurant.orgId !== orgId) {
+      throw new Error("Restaurant belongs to another organization");
+    }
 
-    const hasUpvoted = restaurant.upvotes.includes(userId);
+    const hasUpvoted = restaurant.upvotes.includes(user._id);
     await ctx.db.patch(restaurantId, {
       upvotes: hasUpvoted
-        ? restaurant.upvotes.filter((id) => id !== userId)
-        : [...restaurant.upvotes, userId],
+        ? restaurant.upvotes.filter((id) => id !== user._id)
+        : [...restaurant.upvotes, user._id],
     });
   },
 });
@@ -108,7 +126,19 @@ export const seedEasternProvinceRestaurants = internalMutation({
       );
     }
 
-    const existing = await ctx.db.query("restaurants").collect();
+    const weebs =
+      (await findOrgByCode(ctx, DEFAULT_ORG_CODE)) ??
+      (owner.activeOrgId ? await ctx.db.get(owner.activeOrgId) : null);
+    if (!weebs) {
+      throw new Error(
+        "No organization to attach restaurants — run migrations.runBootstrap first",
+      );
+    }
+
+    const existing = await ctx.db
+      .query("restaurants")
+      .withIndex("by_org", (q) => q.eq("orgId", weebs._id))
+      .collect();
     const existingKeys = new Set(
       existing.map((r) => `${r.name.toLowerCase()}::${r.city ?? ""}`),
     );
@@ -124,6 +154,7 @@ export const seedEasternProvinceRestaurants = internalMutation({
         continue;
       }
       await ctx.db.insert("restaurants", {
+        orgId: weebs._id,
         name: spot.name,
         category: spot.category,
         city: spot.city,

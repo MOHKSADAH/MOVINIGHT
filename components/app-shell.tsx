@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import {
   List,
@@ -149,6 +150,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace("/onboarding");
   }, [user, router]);
 
+  const gate = useQuery(
+    api.organizations.needsOrgGate,
+    user ? {} : "skip",
+  );
+
+  useEffect(() => {
+    if (!user || !user.name?.trim() || gate === undefined) return;
+    if (gate.needsTerms || gate.needsOrg) {
+      router.replace("/join-org");
+    }
+  }, [user, gate, router]);
+
   const isDark = useSyncExternalStore(
     subscribeTheme,
     getThemeSnapshot,
@@ -215,6 +228,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className={cn("flex-1 py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
+          {!collapsed && <OrgSwitcher />}
+          {collapsed && <OrgSwitcher collapsed />}
           {navItems.map((item) => {
             const label = t(item.labelKey);
             const isActive =

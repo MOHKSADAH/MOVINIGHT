@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PrivacyPage() {
   const t = await getTranslations("legal");
+  const tc = await getTranslations("cookies");
 
   return (
-    <LegalShell title={t("privacyTitle")} updated="July 30, 2026">
+    <LegalShell title={t("privacyTitle")} updated="August 9, 2026">
       <p>{t("privacyIntro")}</p>
 
       <LegalSection title={t("privacyWhoWeAreTitle")}>
@@ -70,6 +71,18 @@ export default async function PrivacyPage() {
           <li>{t("privacyChoices2")}</li>
           <li>{t("privacyChoices3")}</li>
         </ul>
+      </LegalSection>
+
+      <LegalSection title={tc("privacyOrgsTitle")}>
+        <p>{tc("privacyOrgsBody")}</p>
+      </LegalSection>
+
+      <LegalSection title={tc("privacyCookiesTitle")}>
+        <p>{tc("privacyCookiesBody")}</p>
+      </LegalSection>
+
+      <LegalSection title={tc("privacyPdplTitle")}>
+        <p>{tc("privacyPdplBody", { email: SITE_CONTACT_EMAIL })}</p>
       </LegalSection>
 
       <LegalSection title={t("privacyChildrenTitle")}>

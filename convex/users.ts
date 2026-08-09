@@ -4,9 +4,15 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   deleteAccount as deleteAccountForUser,
   getActiveUser,
+  hasAcceptedCurrentTerms,
   isAppOwner,
   requireActiveUser,
 } from "./lib/users";
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from "./lib/orgConstants";
+import { getActiveOrgContext } from "./lib/customFunctions";
 import {
   AVATAR_ALLOWED_TYPES,
   AVATAR_MAX_BYTES,
@@ -20,7 +26,11 @@ export const getCurrentUser = query({
   handler: async (ctx) => {
     const user = await getActiveUser(ctx);
     if (!user) return null;
-    return { ...user, isOwner: isAppOwner(user.email) };
+    return {
+      ...user,
+      isOwner: isAppOwner(user.email),
+      hasAcceptedTerms: hasAcceptedCurrentTerms(user),
+    };
   },
 });
 
@@ -54,10 +64,35 @@ export const getUserById = query({
 export const listUsers = query({
   args: {},
   handler: async (ctx) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return [];
-    const users = await ctx.db.query("users").collect();
-    return users.filter((user) => user.deletedAt === undefined);
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
+    const memberships = await ctx.db
+      .query("organizationMembers")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
+    const users = [];
+    for (const membership of memberships) {
+      const user = await ctx.db.get(membership.userId);
+      if (!user || user.deletedAt !== undefined) continue;
+      users.push(user);
+    }
+    return users;
+  },
+});
+
+export const acceptLegal = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const user = await requireActiveUser(ctx);
+    const now = Date.now();
+    await ctx.db.patch(user._id, {
+      termsAcceptedAt: now,
+      privacyAcceptedAt: now,
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    });
+    return null;
   },
 });
 

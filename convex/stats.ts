@@ -1,7 +1,8 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser } from "./lib/users";
+import { getActiveOrgContext } from "./lib/customFunctions";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 type UserRef = {
   _id: Id<"users">;
@@ -25,24 +26,48 @@ function avg(nums: number[]): number | null {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
+async function loadOrgStatsBundle(
+  ctx: QueryCtx,
+  orgId: Id<"organizations">,
+) {
+  const memberships = await ctx.db
+    .query("organizationMembers")
+    .withIndex("by_org", (q) => q.eq("orgId", orgId))
+    .collect();
+  const users = (
+    await Promise.all(memberships.map((m) => ctx.db.get(m.userId)))
+  ).filter((u): u is Doc<"users"> => !!u && u.deletedAt === undefined);
+
+  const [watched, nights, watchlist] = await Promise.all([
+    ctx.db
+      .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect(),
+    ctx.db
+      .query("movie_nights")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect(),
+    ctx.db
+      .query("watchlist_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgId))
+      .collect(),
+  ]);
+
+  return { users, watched, nights, watchlist };
+}
+
 export const getHallOfFame = query({
   args: {},
   handler: async (ctx) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
 
-    const [users, watched, nights, watchlist] = await Promise.all([
-      ctx.db.query("users").collect(),
-      ctx.db.query("watched_entries").collect(),
-      ctx.db.query("movie_nights").collect(),
-      ctx.db.query("watchlist_entries").collect(),
-    ]);
-
-    // Deleted members are left out of the map so every leaderboard row that
-    // resolves through `userRef` drops them.
-    const userMap = new Map(
-      users.filter((u) => u.deletedAt === undefined).map((u) => [u._id, u]),
+    const { users, watched, nights, watchlist } = await loadOrgStatsBundle(
+      ctx,
+      orgCtx.orgId,
     );
+
+    const userMap = new Map(users.map((u) => [u._id, u]));
 
     const ratingsByUser = new Map<Id<"users">, number[]>();
     for (const entry of watched) {
@@ -197,12 +222,15 @@ export const getCharts = query({
     now: v.number(),
   },
   handler: async (ctx, { now }) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) {
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) {
       return { byMonth: [], byGenre: [], ratingHistogram: [] };
     }
 
-    const watched = await ctx.db.query("watched_entries").collect();
+    const watched = await ctx.db
+      .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     const withMovies = await Promise.all(
       watched.map(async (e) => ({
         entry: e,
@@ -265,17 +293,23 @@ export const getCharts = query({
 export const getSeasonWrap = query({
   args: { year: v.number() },
   handler: async (ctx, { year }) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
 
     const start = Date.UTC(year, 0, 1);
     const end = Date.UTC(year + 1, 0, 1);
 
-    const watched = await ctx.db.query("watched_entries").collect();
+    const watched = await ctx.db
+      .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     const inYear = watched.filter(
       (e) => e.watchedAt >= start && e.watchedAt < end,
     );
-    const nights = await ctx.db.query("movie_nights").collect();
+    const nights = await ctx.db
+      .query("movie_nights")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     const nightsInYear = nights.filter((n) => n.date >= start && n.date < end);
 
     const allRatings = inYear.flatMap((e) => e.ratings.map((r) => r.score));
@@ -333,18 +367,14 @@ export const getSeasonWrap = query({
 export const getRoasts = query({
   args: {},
   handler: async (ctx) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
-    const [users, watched, watchlist, nights] = await Promise.all([
-      ctx.db.query("users").collect(),
-      ctx.db.query("watched_entries").collect(),
-      ctx.db.query("watchlist_entries").collect(),
-      ctx.db.query("movie_nights").collect(),
-    ]);
-    const userMap = new Map(
-      users.filter((u) => u.deletedAt === undefined).map((u) => [u._id, u]),
+    const { users, watched, watchlist, nights } = await loadOrgStatsBundle(
+      ctx,
+      orgCtx.orgId,
     );
+    const userMap = new Map(users.map((u) => [u._id, u]));
     const roasts: string[] = [];
 
     const ratingsByUser = new Map<Id<"users">, number[]>();

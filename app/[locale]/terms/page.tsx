@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function TermsPage() {
   const t = await getTranslations("legal");
+  const tc = await getTranslations("cookies");
 
   return (
-    <LegalShell title={t("termsTitle")} updated="July 30, 2026">
+    <LegalShell title={t("termsTitle")} updated="August 9, 2026">
       <p>
         {t("termsIntro", {
           operatorName: SITE_OPERATOR_NAME,
@@ -29,6 +30,10 @@ export default async function TermsPage() {
 
       <LegalSection title={t("termsServiceTitle")}>
         <p>{t("termsServiceBody")}</p>
+      </LegalSection>
+
+      <LegalSection title={tc("termsOrgsTitle")}>
+        <p>{tc("termsOrgsBody")}</p>
       </LegalSection>
 
       <LegalSection title={t("termsAccountsTitle")}>

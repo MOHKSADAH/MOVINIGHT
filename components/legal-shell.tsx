@@ -43,6 +43,9 @@ export function LegalShell({
           <Link href="/terms" className="hover:text-foreground transition-colors">
             {t("termsOfService")}
           </Link>
+          <Link href="/faq" className="hover:text-foreground transition-colors">
+            FAQ
+          </Link>
           <Link href="/about" className="hover:text-foreground transition-colors">
             {t("about")}
           </Link>
