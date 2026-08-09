@@ -228,14 +228,14 @@ export default function LoginPage() {
         {t("agreePrefix")}{" "}
         <Link
           href="/terms"
-          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          className="text-sky-700/80 underline underline-offset-2 hover:text-sky-800 dark:text-sky-400/70 dark:hover:text-sky-300"
         >
           {t("termsLink")}
         </Link>{" "}
         {t("and")}{" "}
         <Link
           href="/privacy"
-          className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          className="text-sky-700/80 underline underline-offset-2 hover:text-sky-800 dark:text-sky-400/70 dark:hover:text-sky-300"
         >
           {t("privacyLink")}
         </Link>
