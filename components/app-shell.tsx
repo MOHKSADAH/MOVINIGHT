@@ -145,22 +145,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Email sign-up gives us no display name, so send those users to onboarding.
   // Google users arrive with a name and skip it.
-  useEffect(() => {
-    if (!user || user.name?.trim()) return;
-    router.replace("/onboarding");
-  }, [user, router]);
-
   const gate = useQuery(
     api.organizations.needsOrgGate,
     user ? {} : "skip",
   );
+  const needsOnboarding = Boolean(user && !user.name?.trim());
+  const needsOrgOrTerms =
+    gate !== undefined && (gate.needsTerms || gate.needsOrg);
 
   useEffect(() => {
-    if (!user || !user.name?.trim() || gate === undefined) return;
-    if (gate.needsTerms || gate.needsOrg) {
-      router.replace("/join-org");
+    if (!needsOnboarding) return;
+    router.replace("/onboarding");
+  }, [needsOnboarding, router]);
+
+  useEffect(() => {
+    if (!user || needsOnboarding || gate === undefined || !needsOrgOrTerms) {
+      return;
     }
-  }, [user, gate, router]);
+    router.replace("/join-org");
+  }, [user, needsOnboarding, gate, needsOrgOrTerms, router]);
 
   const isDark = useSyncExternalStore(
     subscribeTheme,
@@ -185,7 +188,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   };
 
-  if (!AUTH_DISABLED && (isLoading || !isAuthenticated)) {
+  // Hold the shell until auth + profile gates resolve so new accounts never
+  // flash the dashboard before onboarding / join-org.
+  if (
+    !AUTH_DISABLED &&
+    (isLoading ||
+      !isAuthenticated ||
+      user === undefined ||
+      needsOnboarding ||
+      (Boolean(user?.name?.trim()) && gate === undefined) ||
+      needsOrgOrTerms)
+  ) {
     return <LoadingScreen />;
   }
 
