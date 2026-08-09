@@ -37,19 +37,34 @@ export function LegalShell({
         </article>
 
         <footer className="mt-12 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-6 text-xs text-muted-foreground">
-          <Link href="/privacy" className="hover:text-foreground transition-colors">
+          <Link
+            href="/privacy"
+            className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
             {t("privacyPolicy")}
           </Link>
-          <Link href="/terms" className="hover:text-foreground transition-colors">
+          <Link
+            href="/terms"
+            className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
             {t("termsOfService")}
           </Link>
-          <Link href="/faq" className="hover:text-foreground transition-colors">
+          <Link
+            href="/faq"
+            className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
             FAQ
           </Link>
-          <Link href="/about" className="hover:text-foreground transition-colors">
+          <Link
+            href="/about"
+            className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
             {t("about")}
           </Link>
-          <Link href="/login" className="hover:text-foreground transition-colors">
+          <Link
+            href="/login"
+            className="text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
             {t("signIn")}
           </Link>
           <a
