@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -40,13 +41,9 @@ import { useRouter } from "@/i18n/navigation";
 import { AvatarPicker } from "@/components/avatar-picker";
 import { getDateFnsLocale, getLocalizedMovieTitle } from "@/lib/locale";
 
-export default function ProfilePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const userId = id as Id<"users">;
+export default function ProfilePage() {
+  const routeParams = useParams<{ id: string }>();
+  const userId = routeParams.id as Id<"users">;
 
   const t = useTranslations("members");
   const tCommon = useTranslations("common");

@@ -13,11 +13,15 @@ import { useParams } from "next/navigation";
 
 export default function InviteAcceptPage() {
   const t = useTranslations("org");
-  const params = useParams<{ token: string }>();
-  const token = params.token;
+  const routeParams = useParams<{ token: string }>();
+  const token =
+    typeof routeParams.token === "string" ? routeParams.token : "";
   const router = useRouter();
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const invite = useQuery(api.organizationInvites.getByToken, { token });
+  const invite = useQuery(
+    api.organizationInvites.getByToken,
+    token ? { token } : "skip",
+  );
   const accept = useMutation(api.organizationInvites.accept);
   const acceptLegal = useMutation(api.users.acceptLegal);
   const user = useQuery(api.users.getCurrentUser);
