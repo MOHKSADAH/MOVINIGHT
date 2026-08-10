@@ -38,7 +38,11 @@ import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "@/i18n/navigation";
-import { AvatarPicker, applyAvatarSelection, type AvatarSelection } from "@/components/avatar-picker";
+import { AvatarPicker } from "@/components/avatar-picker";
+import {
+  applyAvatarSelection,
+  type AvatarSelection,
+} from "@/lib/avatar-selection";
 import { getDateFnsLocale, getLocalizedMovieTitle } from "@/lib/locale";
 
 export default function ProfilePage() {
@@ -129,17 +133,23 @@ export default function ProfilePage() {
       }
     } catch {
       toast.error(t("toastDeleteAccountFailed"));
+    } finally {
       setDeleting(false);
     }
   };
 
   // Filter entries relevant to this user
-  const userRatings = watchedEntries
-    ?.map((entry) => ({
-      ...entry,
-      myRating: entry.ratings.find((r) => r.userId === userId),
-    }))
-    .filter((entry) => entry.myRating);
+  const userRatings = (() => {
+    if (!watchedEntries) return undefined;
+    const rated = [];
+    for (const entry of watchedEntries) {
+      const myRating = entry.ratings.find((r) => r.userId === userId);
+      if (myRating) {
+        rated.push({ ...entry, myRating });
+      }
+    }
+    return rated;
+  })();
 
   const userWatchlistEntries = watchlist?.filter(
     (entry) => entry.addedBy?._id === userId,

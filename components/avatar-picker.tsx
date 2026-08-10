@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m, LazyMotion, domAnimation } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
-import type { Id } from "@/convex/_generated/dataModel";
 import {
   AVATAR_ALLOWED_TYPES,
   AVATAR_MAX_BYTES,
@@ -14,6 +13,10 @@ import {
   isAvatarPresetSrc,
   type AvatarPresetId,
 } from "@/convex/lib/avatars";
+import {
+  avatarSelectionPreview,
+  type AvatarSelection,
+} from "@/lib/avatar-selection";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,68 +27,6 @@ const EXPAND_TRANSITION = {
   duration: 0.32,
   ease: [0.22, 1, 0.36, 1] as const,
 };
-
-/** Draft avatar choice — applied only when the parent form saves. */
-export type AvatarSelection =
-  | { kind: "keep" }
-  | { kind: "preset"; src: string }
-  | { kind: "clear" }
-  | { kind: "upload"; file: File; previewUrl: string };
-
-export function avatarSelectionPreview(
-  selection: AvatarSelection,
-  currentAvatar: string | undefined,
-): string | undefined {
-  switch (selection.kind) {
-    case "keep":
-      return currentAvatar;
-    case "preset":
-      return selection.src;
-    case "clear":
-      return undefined;
-    case "upload":
-      return selection.previewUrl;
-  }
-}
-
-export async function applyAvatarSelection(
-  selection: AvatarSelection,
-  actions: {
-    generateUploadUrl: () => Promise<string>;
-    setUploadedAvatar: (args: {
-      storageId: Id<"_storage">;
-    }) => Promise<unknown>;
-    setPresetAvatar: (args: { src: string }) => Promise<unknown>;
-    clearAvatar: () => Promise<unknown>;
-  },
-): Promise<boolean> {
-  if (selection.kind === "keep") return false;
-
-  if (selection.kind === "clear") {
-    await actions.clearAvatar();
-    return true;
-  }
-
-  if (selection.kind === "preset") {
-    await actions.setPresetAvatar({ src: selection.src });
-    return true;
-  }
-
-  const uploadUrl = await actions.generateUploadUrl();
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: { "Content-Type": selection.file.type },
-    body: selection.file,
-  });
-  if (!response.ok) {
-    throw new Error(`Upload failed: ${response.status}`);
-  }
-  const { storageId } = (await response.json()) as {
-    storageId: Id<"_storage">;
-  };
-  await actions.setUploadedAvatar({ storageId });
-  return true;
-}
 
 function PresetButton({
   id,
@@ -252,6 +193,7 @@ export function AvatarPicker({
           type="file"
           accept={ACCEPT}
           className="sr-only"
+          aria-label={t("avatarUploadAction")}
           onChange={handleFileChange}
         />
       </div>
@@ -273,60 +215,62 @@ export function AvatarPicker({
             />
           ))}
         </div>
-        <AnimatePresence initial={false}>
-          {expanded ? (
-            <motion.div
-              key="avatar-extras"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={EXPAND_TRANSITION}
-              className="overflow-hidden"
+        <LazyMotion features={domAnimation} strict>
+          <AnimatePresence initial={false}>
+            {expanded ? (
+              <m.div
+                key="avatar-extras"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={EXPAND_TRANSITION}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-5 gap-2.5 pt-2.5">
+                  {extraPresets.map((preset, index) => (
+                    <m.div
+                      key={preset.id}
+                      initial={{ opacity: 0, y: 8, scale: 0.92 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{
+                        ...EXPAND_TRANSITION,
+                        delay: Math.min(index * 0.02, 0.18),
+                      }}
+                    >
+                      <PresetButton
+                        id={preset.id}
+                        src={preset.src}
+                        label={tPresets(preset.id)}
+                        selected={selectedPresetSrc === preset.src}
+                        disabled={busy}
+                        onSelect={(src) =>
+                          replaceSelection({ kind: "preset", src })
+                        }
+                      />
+                    </m.div>
+                  ))}
+                </div>
+              </m.div>
+            ) : null}
+          </AnimatePresence>
+          {extraPresets.length > 0 ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 pt-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setExpandedByUser((value) => !value)}
+              aria-expanded={expanded}
             >
-              <div className="grid grid-cols-5 gap-2.5 pt-2.5">
-                {extraPresets.map((preset, index) => (
-                  <motion.div
-                    key={preset.id}
-                    initial={{ opacity: 0, y: 8, scale: 0.92 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{
-                      ...EXPAND_TRANSITION,
-                      delay: Math.min(index * 0.02, 0.18),
-                    }}
-                  >
-                    <PresetButton
-                      id={preset.id}
-                      src={preset.src}
-                      label={tPresets(preset.id)}
-                      selected={selectedPresetSrc === preset.src}
-                      disabled={busy}
-                      onSelect={(src) =>
-                        replaceSelection({ kind: "preset", src })
-                      }
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
+              <m.span
+                animate={{ rotate: expanded ? 180 : 0 }}
+                transition={EXPAND_TRANSITION}
+                className="inline-flex"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </m.span>
+              {expanded ? t("avatarShowLess") : t("avatarViewMore")}
+            </button>
           ) : null}
-        </AnimatePresence>
-        {extraPresets.length > 0 ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 pt-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => setExpandedByUser((value) => !value)}
-            aria-expanded={expanded}
-          >
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={EXPAND_TRANSITION}
-              className="inline-flex"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </motion.span>
-            {expanded ? t("avatarShowLess") : t("avatarViewMore")}
-          </button>
-        ) : null}
+        </LazyMotion>
       </div>
     </div>
   );

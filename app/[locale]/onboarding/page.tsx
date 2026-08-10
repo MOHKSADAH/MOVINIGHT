@@ -5,11 +5,11 @@ import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
+import { AvatarPicker } from "@/components/avatar-picker";
 import {
-  AvatarPicker,
   applyAvatarSelection,
   type AvatarSelection,
-} from "@/components/avatar-picker";
+} from "@/lib/avatar-selection";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ export default function OnboardingPage() {
           ? error.message
           : t("saveFailed"),
       );
+    } finally {
       setSaving(false);
     }
   };
