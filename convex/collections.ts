@@ -4,7 +4,7 @@ import {
   getActiveOrgContext,
   requireActiveOrgContext,
 } from "./lib/customFunctions";
-import { findOrgByCode } from "./lib/orgs";
+import { belongsToOrg, findOrgByCode } from "./lib/orgs";
 import { DEFAULT_ORG_CODE } from "./lib/orgConstants";
 import {
   CURATED_COLLECTIONS,
@@ -58,8 +58,9 @@ export const getCollection = query({
     if (!orgCtx) return null;
 
     const collection = await ctx.db.get(collectionId);
-    if (!collection) return null;
-    if (collection.orgId && collection.orgId !== orgCtx.orgId) return null;
+    if (!collection || !belongsToOrg(collection.orgId, orgCtx.orgId)) {
+      return null;
+    }
 
     const [owner, entries] = await Promise.all([
       ctx.db.get(collection.ownerId),
@@ -113,9 +114,10 @@ export const deleteCollection = mutation({
     if (
       !collection ||
       collection.ownerId !== user._id ||
-      (collection.orgId && collection.orgId !== orgId)
-    )
+      !belongsToOrg(collection.orgId, orgId)
+    ) {
       throw new Error("Not authorized");
+    }
 
     const entries = await ctx.db
       .query("collection_movies")
@@ -134,7 +136,7 @@ export const addMovieToCollection = mutation({
   handler: async (ctx, args) => {
     const { user, orgId } = await requireActiveOrgContext(ctx);
     const collection = await ctx.db.get(args.collectionId);
-    if (!collection || (collection.orgId && collection.orgId !== orgId)) {
+    if (!collection || !belongsToOrg(collection.orgId, orgId)) {
       throw new Error("Collection not found");
     }
 
@@ -158,7 +160,15 @@ export const addMovieToCollection = mutation({
 export const removeMovieFromCollection = mutation({
   args: { entryId: v.id("collection_movies") },
   handler: async (ctx, { entryId }) => {
-    await requireActiveOrgContext(ctx);
+    const { orgId } = await requireActiveOrgContext(ctx);
+    const entry = await ctx.db.get(entryId);
+    if (!entry) throw new Error("Entry not found");
+
+    const collection = await ctx.db.get(entry.collectionId);
+    if (!collection || !belongsToOrg(collection.orgId, orgId)) {
+      throw new Error("Not authorized");
+    }
+
     await ctx.db.delete(entryId);
   },
 });

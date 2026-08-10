@@ -68,6 +68,17 @@ export async function requireOwnerMembership(
   return result;
 }
 
+/**
+ * Strict org ownership: missing `orgId` does not pass.
+ * Prefer this over `doc.orgId && doc.orgId !== activeOrgId` short-circuits.
+ */
+export function belongsToOrg(
+  docOrgId: Id<"organizations"> | undefined,
+  activeOrgId: Id<"organizations">,
+): boolean {
+  return docOrgId === activeOrgId;
+}
+
 export async function listMembershipsForUser(
   ctx: AnyCtx,
   userId: Id<"users">,

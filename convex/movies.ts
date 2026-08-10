@@ -20,6 +20,16 @@ export const upsertMovie = mutation({
   handler: async (ctx, args) => {
     await requireActiveUser(ctx);
 
+    if (args.title.length > 200) {
+      throw new Error("Title must be 200 characters or fewer");
+    }
+    if (args.overview.length > 4000) {
+      throw new Error("Overview must be 4000 characters or fewer");
+    }
+    if (args.poster.length > 500) {
+      throw new Error("Poster URL is too long");
+    }
+
     const existing = await ctx.db
       .query("movies")
       .withIndex("by_tmdbId", (q) => q.eq("tmdbId", args.tmdbId))

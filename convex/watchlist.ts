@@ -4,7 +4,7 @@ import {
   getActiveOrgContext,
   requireActiveOrgContext,
 } from "./lib/customFunctions";
-import { assertOrgAccessible } from "./lib/orgs";
+import { belongsToOrg } from "./lib/orgs";
 
 export const getWatchlist = query({
   args: {},
@@ -78,8 +78,7 @@ export const toggleUpvote = mutation({
     const { user, orgId } = await requireActiveOrgContext(ctx);
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
-    await assertOrgAccessible(ctx, user._id, entry.orgId ?? orgId);
-    if (entry.orgId && entry.orgId !== orgId) {
+    if (!belongsToOrg(entry.orgId, orgId)) {
       throw new Error("Entry belongs to another organization");
     }
 
@@ -98,7 +97,7 @@ export const toggleDownvote = mutation({
     const { user, orgId } = await requireActiveOrgContext(ctx);
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
-    if (entry.orgId && entry.orgId !== orgId) {
+    if (!belongsToOrg(entry.orgId, orgId)) {
       throw new Error("Entry belongs to another organization");
     }
 
@@ -118,7 +117,7 @@ export const removeFromWatchlist = mutation({
     const { orgId } = await requireActiveOrgContext(ctx);
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
-    if (entry.orgId && entry.orgId !== orgId) {
+    if (!belongsToOrg(entry.orgId, orgId)) {
       throw new Error("Entry belongs to another organization");
     }
     await ctx.db.delete(entryId);
