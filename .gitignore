@@ -26,7 +26,17 @@
 # misc
 .DS_Store
 *.pem
-.cursor
+
+# Local AI / editor agent config (never commit)
+.cursor/
+.claude/
+.agents/
+.agent/
+.codex/
+.windsurf/
+.continue/
+.aider*
+.scratch/
 
 # debug
 npm-debug.log*
