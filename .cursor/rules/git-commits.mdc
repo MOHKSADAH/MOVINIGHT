@@ -1,0 +1,22 @@
+---
+description: Commit message style — short subject only, no body
+alwaysApply: true
+---
+
+# Git commit messages
+
+When creating commits in this repository:
+
+- Use a **single-line subject only** — **no commit body**
+- Keep the subject **under 100 characters**
+- Be professional and concise; focus on **why**
+- Never add AI attribution trailers (`Co-Authored-By`, `Made with Cursor`, etc.)
+- Split work into **multiple focused commits** when changes cover distinct concerns
+
+## Examples
+
+```text
+Restore legacy Weebs access and drop weebs code placeholder.
+Defer avatar saves until Save and restore themed presets.
+Replace login native validation with shadcn Field errors.
+```
