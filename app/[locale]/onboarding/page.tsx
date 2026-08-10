@@ -5,7 +5,11 @@ import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
-import { AvatarPicker } from "@/components/avatar-picker";
+import {
+  AvatarPicker,
+  applyAvatarSelection,
+  type AvatarSelection,
+} from "@/components/avatar-picker";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
@@ -24,8 +28,15 @@ export default function OnboardingPage() {
 
   const user = useQuery(api.users.getCurrentUser);
   const updateUser = useMutation(api.users.updateUser);
+  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const setUploadedAvatar = useMutation(api.users.setUploadedAvatar);
+  const setPresetAvatar = useMutation(api.users.setPresetAvatar);
+  const clearAvatar = useMutation(api.users.clearAvatar);
 
   const [name, setName] = useState("");
+  const [avatarSelection, setAvatarSelection] = useState<AvatarSelection>({
+    kind: "keep",
+  });
   const [saving, setSaving] = useState(false);
 
   const alreadyOnboarded = !!user?.name?.trim();
@@ -44,10 +55,20 @@ export default function OnboardingPage() {
 
     setSaving(true);
     try {
+      await applyAvatarSelection(avatarSelection, {
+        generateUploadUrl,
+        setUploadedAvatar,
+        setPresetAvatar,
+        clearAvatar,
+      });
       await updateUser({ name: trimmedName });
       router.replace("/join-org");
-    } catch {
-      toast.error(t("saveFailed"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : t("saveFailed"),
+      );
       setSaving(false);
     }
   };
@@ -115,7 +136,10 @@ export default function OnboardingPage() {
                 </div>
                 <AvatarPicker
                   currentAvatar={user?.avatar ?? user?.image ?? undefined}
+                  selection={avatarSelection}
+                  onSelectionChange={setAvatarSelection}
                   fallbackInitial={trimmedName[0]?.toUpperCase()}
+                  disabled={saving}
                 />
               </div>
 
