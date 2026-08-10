@@ -1,15 +1,20 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser, requireActiveUser, requireAppOwner } from "./lib/users";
+import { requireAppOwner } from "./lib/users";
+import {
+  getActiveOrgContext,
+  requireActiveOrgContext,
+} from "./lib/customFunctions";
 
 export const getWatchedEntries = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
     const entries = await ctx.db
       .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
       .order("desc")
       .collect();
 
@@ -30,11 +35,20 @@ export const addWatchedEntry = mutation({
     watchedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireActiveUser(ctx);
+    const { orgId } = await requireActiveOrgContext(ctx);
+
+    if (args.nightId) {
+      const night = await ctx.db.get(args.nightId);
+      if (!night || (night.orgId && night.orgId !== orgId)) {
+        throw new Error("Night not found in this organization");
+      }
+    }
 
     const watchlistEntry = await ctx.db
       .query("watchlist_entries")
-      .withIndex("by_movie", (q) => q.eq("movieId", args.movieId))
+      .withIndex("by_org_and_movie", (q) =>
+        q.eq("orgId", orgId).eq("movieId", args.movieId),
+      )
       .first();
 
     const suggestedBy = watchlistEntry
@@ -50,6 +64,7 @@ export const addWatchedEntry = mutation({
         : undefined;
 
     const entryId = await ctx.db.insert("watched_entries", {
+      orgId,
       movieId: args.movieId,
       nightId: args.nightId,
       pickedBy: args.pickedBy,
@@ -73,7 +88,7 @@ export const addRating = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, { entryId, score, note }) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
 
     if (!Number.isInteger(score) || score < 1 || score > 5) {
       throw new Error("Rating must be a whole number from 1 to 5");
@@ -81,9 +96,12 @@ export const addRating = mutation({
 
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
+    if (entry.orgId && entry.orgId !== orgId) {
+      throw new Error("Entry belongs to another organization");
+    }
 
-    const ratings = entry.ratings.filter((r) => r.userId !== userId);
-    ratings.push({ userId, score, note });
+    const ratings = entry.ratings.filter((r) => r.userId !== user._id);
+    ratings.push({ userId: user._id, score, note });
 
     await ctx.db.patch(entryId, { ratings });
   },
@@ -92,9 +110,12 @@ export const addRating = mutation({
 export const getWatchedCount = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return 0;
-    const entries = await ctx.db.query("watched_entries").collect();
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return 0;
+    const entries = await ctx.db
+      .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     return entries.length;
   },
 });
@@ -102,10 +123,13 @@ export const getWatchedCount = query({
 export const getUserStats = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
 
-    const entries = await ctx.db.query("watched_entries").collect();
+    const entries = await ctx.db
+      .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .collect();
     const userRatings = entries.flatMap((e) =>
       e.ratings.filter((r) => r.userId === userId),
     );
@@ -126,6 +150,12 @@ export const deleteWatchedEntry = mutation({
   args: { entryId: v.id("watched_entries") },
   handler: async (ctx, { entryId }) => {
     await requireAppOwner(ctx);
+    const { orgId } = await requireActiveOrgContext(ctx);
+    const entry = await ctx.db.get(entryId);
+    if (!entry) throw new Error("Entry not found");
+    if (entry.orgId && entry.orgId !== orgId) {
+      throw new Error("Entry belongs to another organization");
+    }
     await ctx.db.delete(entryId);
   },
 });
@@ -133,11 +163,12 @@ export const deleteWatchedEntry = mutation({
 export const getRecentWatched = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 5 }) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
     const entries = await ctx.db
       .query("watched_entries")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
       .order("desc")
       .take(limit);
 

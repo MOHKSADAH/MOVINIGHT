@@ -41,7 +41,7 @@ export function renderOtpEmail({
   siteUrl,
 }: OtpEmailParams): RenderedEmail {
   const host = hostFrom(siteUrl);
-  const subject = `${token} — your Movie Night sign-in code`;
+  const subject = `${token} — your MOVINIGHT sign-in code`;
 
   const html = `<!doctype html>
 <html lang="en">
@@ -113,7 +113,7 @@ ${host}
 </html>`;
 
   const text = [
-    "MOVIE NIGHT — ADMIT ONE",
+    "MOVINIGHT — ADMIT ONE",
     "",
     `Sign-in code: ${token}`,
     `Expires in ${expiresInMinutes} minutes.`,

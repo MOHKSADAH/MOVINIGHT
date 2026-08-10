@@ -19,7 +19,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         if (!apiKey) throw new Error("AUTH_RESEND_KEY is not set");
 
         const from =
-          process.env.AUTH_RESEND_FROM ?? "Movie Night <onboarding@resend.dev>";
+          process.env.AUTH_RESEND_FROM ?? "MOVINIGHT <onboarding@resend.dev>";
 
         const { subject, html, text } = renderOtpEmail({
           token,

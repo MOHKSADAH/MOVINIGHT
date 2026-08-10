@@ -37,16 +37,19 @@ export function LegalShell({
         </article>
 
         <footer className="mt-12 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-6 text-xs text-muted-foreground">
-          <Link href="/privacy" className="hover:text-foreground transition-colors">
+          <Link href="/privacy" className="transition-colors hover:text-foreground">
             {t("privacyPolicy")}
           </Link>
-          <Link href="/terms" className="hover:text-foreground transition-colors">
+          <Link href="/terms" className="transition-colors hover:text-foreground">
             {t("termsOfService")}
           </Link>
-          <Link href="/about" className="hover:text-foreground transition-colors">
+          <Link href="/faq" className="transition-colors hover:text-foreground">
+            FAQ
+          </Link>
+          <Link href="/about" className="transition-colors hover:text-foreground">
             {t("about")}
           </Link>
-          <Link href="/login" className="hover:text-foreground transition-colors">
+          <Link href="/login" className="transition-colors hover:text-foreground">
             {t("signIn")}
           </Link>
           <a

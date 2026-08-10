@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { PRIVACY_VERSION, TERMS_VERSION } from "./orgConstants";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
@@ -31,6 +32,21 @@ export async function requireAppOwner(ctx: AnyCtx): Promise<Doc<"users">> {
   return user;
 }
 
+export function hasAcceptedCurrentTerms(user: Doc<"users">): boolean {
+  return (
+    user.termsAcceptedAt !== undefined &&
+    user.privacyAcceptedAt !== undefined &&
+    user.termsVersion === TERMS_VERSION &&
+    user.privacyVersion === PRIVACY_VERSION
+  );
+}
+
+export function requireTermsAccepted(user: Doc<"users">): void {
+  if (!hasAcceptedCurrentTerms(user)) {
+    throw new Error("You must accept the Terms and Privacy Policy first");
+  }
+}
+
 /**
  * Anonymizes a member and revokes every credential tied to them.
  *
@@ -44,6 +60,7 @@ export async function deleteAccount(
 ): Promise<void> {
   await revokeAuthCredentials(ctx, userId);
   await removeLiveParticipation(ctx, userId);
+  await removeOrgMemberships(ctx, userId);
 
   const user = await ctx.db.get(userId);
   if (user?.avatarStorageId) {
@@ -60,8 +77,27 @@ export async function deleteAccount(
     phone: undefined,
     emailVerificationTime: undefined,
     phoneVerificationTime: undefined,
+    activeOrgId: undefined,
+    orgSetupCompletedAt: undefined,
+    termsAcceptedAt: undefined,
+    privacyAcceptedAt: undefined,
+    termsVersion: undefined,
+    privacyVersion: undefined,
     deletedAt: Date.now(),
   });
+}
+
+async function removeOrgMemberships(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+): Promise<void> {
+  const memberships = await ctx.db
+    .query("organizationMembers")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const membership of memberships) {
+    await ctx.db.delete(membership._id);
+  }
 }
 
 /**

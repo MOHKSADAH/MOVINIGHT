@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -142,13 +143,9 @@ function WrapUpDialog({
   );
 }
 
-export default function NightRoomPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const nightId = id as Id<"movie_nights">;
+export default function NightRoomPage() {
+  const routeParams = useParams<{ id: string }>();
+  const nightId = routeParams.id as Id<"movie_nights">;
 
   const t = useTranslations("nights");
   const locale = useLocale();

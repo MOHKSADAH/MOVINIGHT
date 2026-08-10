@@ -2,6 +2,22 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
+const orgRole = v.union(v.literal("owner"), v.literal("member"));
+
+const membershipSource = v.union(
+  v.literal("seed"),
+  v.literal("code"),
+  v.literal("create"),
+  v.literal("invite"),
+);
+
+const inviteStatus = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+  v.literal("revoked"),
+  v.literal("expired"),
+);
+
 export default defineSchema({
   ...authTables,
 
@@ -23,7 +39,55 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     /** Set when the account is deleted; the row is kept so shared history stays intact. */
     deletedAt: v.optional(v.number()),
+    /** Currently selected organization for org-scoped queries. */
+    activeOrgId: v.optional(v.id("organizations")),
+    /**
+     * Set only when the user explicitly creates, joins by code, or accepts an
+     * invite. Seed/backfill membership alone does not count — they must still
+     * complete the join-org flow before using the app.
+     */
+    orgSetupCompletedAt: v.optional(v.number()),
+    termsAcceptedAt: v.optional(v.number()),
+    privacyAcceptedAt: v.optional(v.number()),
+    termsVersion: v.optional(v.string()),
+    privacyVersion: v.optional(v.string()),
   }).index("email", ["email"]),
+
+  organizations: defineTable({
+    name: v.string(),
+    /** Lowercase join code, uniqueness enforced in mutations. */
+    code: v.string(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_code", ["code"]),
+
+  organizationMembers: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+    role: orgRole,
+    joinedAt: v.number(),
+    /**
+     * How the user joined. `"seed"` is migration-only and does not grant app
+     * access — they must join with the code (or invite) first.
+     */
+    source: v.optional(membershipSource),
+  })
+    .index("by_org", ["orgId"])
+    .index("by_user", ["userId"])
+    .index("by_org_and_user", ["orgId", "userId"]),
+
+  organizationInvites: defineTable({
+    orgId: v.id("organizations"),
+    email: v.string(),
+    token: v.string(),
+    invitedBy: v.id("users"),
+    status: inviteStatus,
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_org", ["orgId"])
+    .index("by_email", ["email"]),
 
   movies: defineTable({
     tmdbId: v.number(),
@@ -41,15 +105,20 @@ export default defineSchema({
   }).index("by_tmdbId", ["tmdbId"]),
 
   watchlist_entries: defineTable({
+    orgId: v.optional(v.id("organizations")),
     movieId: v.id("movies"),
     addedBy: v.id("users"),
     addedAt: v.number(),
     upvotes: v.array(v.id("users")),
     downvotes: v.optional(v.array(v.id("users"))),
     note: v.optional(v.string()),
-  }).index("by_movie", ["movieId"]),
+  })
+    .index("by_movie", ["movieId"])
+    .index("by_org", ["orgId"])
+    .index("by_org_and_movie", ["orgId", "movieId"]),
 
   movie_nights: defineTable({
+    orgId: v.optional(v.id("organizations")),
     title: v.string(),
     date: v.number(),
     hostId: v.id("users"),
@@ -65,9 +134,12 @@ export default defineSchema({
     reminderSentAt: v.optional(v.number()),
   })
     .index("by_status", ["status"])
-    .index("by_date", ["date"]),
+    .index("by_date", ["date"])
+    .index("by_org", ["orgId"])
+    .index("by_org_and_status", ["orgId", "status"]),
 
   watched_entries: defineTable({
+    orgId: v.optional(v.id("organizations")),
     movieId: v.id("movies"),
     nightId: v.optional(v.id("movie_nights")),
     pickedBy: v.optional(v.id("users")),
@@ -83,14 +155,18 @@ export default defineSchema({
     ),
   })
     .index("by_movie", ["movieId"])
-    .index("by_night", ["nightId"]),
+    .index("by_night", ["nightId"])
+    .index("by_org", ["orgId"]),
 
   collections: defineTable({
+    orgId: v.optional(v.id("organizations")),
     name: v.string(),
     description: v.optional(v.string()),
     ownerId: v.id("users"),
     createdAt: v.number(),
-  }).index("by_owner", ["ownerId"]),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_org", ["orgId"]),
 
   collection_movies: defineTable({
     collectionId: v.id("collections"),
@@ -102,6 +178,7 @@ export default defineSchema({
     .index("by_collection_movie", ["collectionId", "movieId"]),
 
   restaurants: defineTable({
+    orgId: v.optional(v.id("organizations")),
     name: v.string(),
     category: v.string(),
     addedBy: v.id("users"),
@@ -120,5 +197,7 @@ export default defineSchema({
     upvotes: v.array(v.id("users")),
   })
     .index("by_category", ["category"])
-    .index("by_city", ["city"]),
+    .index("by_city", ["city"])
+    .index("by_org", ["orgId"])
+    .index("by_org_and_category", ["orgId", "category"]),
 });

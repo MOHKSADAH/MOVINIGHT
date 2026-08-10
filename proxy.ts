@@ -14,6 +14,7 @@ const PUBLIC_PATHS = new Set([
   "/privacy",
   "/terms",
   "/about",
+  "/faq",
 ]);
 
 function stripLocale(pathname: string): string {
@@ -61,7 +62,11 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
     return nextjsMiddlewareRedirect(request, withLocale("/", locale));
   }
 
-  if (!PUBLIC_PATHS.has(pathWithoutLocale) && !isAuthenticated) {
+  if (
+    !PUBLIC_PATHS.has(pathWithoutLocale) &&
+    !pathWithoutLocale.startsWith("/invite/") &&
+    !isAuthenticated
+  ) {
     return nextjsMiddlewareRedirect(request, withLocale("/login", locale));
   }
 

@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import {
   List,
@@ -144,10 +145,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Email sign-up gives us no display name, so send those users to onboarding.
   // Google users arrive with a name and skip it.
+  const gate = useQuery(
+    api.organizations.needsOrgGate,
+    user ? {} : "skip",
+  );
+  const needsOnboarding = Boolean(user && !user.name?.trim());
+  const needsOrgOrTerms =
+    gate !== undefined && (gate.needsTerms || gate.needsOrg);
+
   useEffect(() => {
-    if (!user || user.name?.trim()) return;
+    if (!needsOnboarding) return;
     router.replace("/onboarding");
-  }, [user, router]);
+  }, [needsOnboarding, router]);
+
+  useEffect(() => {
+    if (!user || needsOnboarding || gate === undefined || !needsOrgOrTerms) {
+      return;
+    }
+    router.replace("/join-org");
+  }, [user, needsOnboarding, gate, needsOrgOrTerms, router]);
 
   const isDark = useSyncExternalStore(
     subscribeTheme,
@@ -172,7 +188,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   };
 
-  if (!AUTH_DISABLED && (isLoading || !isAuthenticated)) {
+  // Hold the shell until auth + profile gates resolve so new accounts never
+  // flash the dashboard before onboarding / join-org.
+  if (
+    !AUTH_DISABLED &&
+    (isLoading ||
+      !isAuthenticated ||
+      user === undefined ||
+      needsOnboarding ||
+      (Boolean(user?.name?.trim()) && gate === undefined) ||
+      needsOrgOrTerms)
+  ) {
     return <LoadingScreen />;
   }
 
@@ -215,6 +241,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className={cn("flex-1 py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
+          {!collapsed && <OrgSwitcher />}
+          {collapsed && <OrgSwitcher collapsed />}
           {navItems.map((item) => {
             const label = t(item.labelKey);
             const isActive =

@@ -1,25 +1,49 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveUser, requireActiveUser } from "./lib/users";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
+import {
+  getActiveOrgContext,
+  requireActiveOrgContext,
+} from "./lib/customFunctions";
+
+async function requireNightInActiveOrg(
+  ctx: MutationCtx,
+  nightId: Id<"movie_nights">,
+) {
+  const orgCtx = await requireActiveOrgContext(ctx);
+  const night = await ctx.db.get(nightId);
+  if (!night) throw new Error("Night not found");
+  if (night.orgId && night.orgId !== orgCtx.orgId) {
+    throw new Error("Night belongs to another organization");
+  }
+  return { ...orgCtx, night };
+}
 
 export const getNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
-    return await ctx.db.query("movie_nights").order("desc").collect();
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
+    return await ctx.db
+      .query("movie_nights")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .order("desc")
+      .collect();
   },
 });
 
 export const getUpcomingNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
     return await ctx.db
       .query("movie_nights")
-      .withIndex("by_status", (q) => q.eq("status", "upcoming"))
+      .withIndex("by_org_and_status", (q) =>
+        q.eq("orgId", orgCtx.orgId).eq("status", "upcoming"),
+      )
       .collect();
   },
 });
@@ -27,11 +51,12 @@ export const getUpcomingNights = query({
 export const getNight = query({
   args: { nightId: v.id("movie_nights") },
   handler: async (ctx, { nightId }) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
 
     const night = await ctx.db.get(nightId);
     if (!night) return null;
+    if (night.orgId && night.orgId !== orgCtx.orgId) return null;
 
     const [candidateMovies, pickedMovieData, host, attendeeUsers] =
       await Promise.all([
@@ -59,14 +84,15 @@ export const createNight = mutation({
     date: v.number(),
   },
   handler: async (ctx, { title, date }) => {
-    const userId = (await requireActiveUser(ctx))._id;
+    const { user, orgId } = await requireActiveOrgContext(ctx);
 
     const nightId = await ctx.db.insert("movie_nights", {
+      orgId,
       title,
       date,
-      hostId: userId,
+      hostId: user._id,
       status: "upcoming",
-      attendees: [userId],
+      attendees: [user._id],
       candidates: [],
     });
 
@@ -84,10 +110,7 @@ export const addCandidate = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, { nightId, movieId }) => {
-    await requireActiveUser(ctx);
-
-    const night = await ctx.db.get(nightId);
-    if (!night) throw new Error("Night not found");
+    const { night } = await requireNightInActiveOrg(ctx, nightId);
 
     if (!night.candidates.includes(movieId)) {
       await ctx.db.patch(nightId, {
@@ -103,7 +126,7 @@ export const pickMovie = mutation({
     movieId: v.id("movies"),
   },
   handler: async (ctx, { nightId, movieId }) => {
-    await requireActiveUser(ctx);
+    await requireNightInActiveOrg(ctx, nightId);
 
     await ctx.db.patch(nightId, {
       pickedMovie: movieId,
@@ -122,10 +145,7 @@ export const updateNightStatus = mutation({
     ),
   },
   handler: async (ctx, { nightId, status }) => {
-    await requireActiveUser(ctx);
-
-    const night = await ctx.db.get(nightId);
-    if (!night) throw new Error("Night not found");
+    const { night } = await requireNightInActiveOrg(ctx, nightId);
 
     if (status === "done" && night.reminderJobId) {
       try {
@@ -144,14 +164,13 @@ export const updateNightStatus = mutation({
 export const joinNight = mutation({
   args: { nightId: v.id("movie_nights") },
   handler: async (ctx, { nightId }) => {
-    const userId = (await requireActiveUser(ctx))._id;
-
+    const { user } = await requireNightInActiveOrg(ctx, nightId);
     const night = await ctx.db.get(nightId);
     if (!night) throw new Error("Night not found");
 
-    if (!night.attendees.includes(userId)) {
+    if (!night.attendees.includes(user._id)) {
       await ctx.db.patch(nightId, {
-        attendees: [...night.attendees, userId],
+        attendees: [...night.attendees, user._id],
       });
     }
   },
@@ -160,10 +179,14 @@ export const joinNight = mutation({
 export const getCalendarNights = query({
   args: {},
   handler: async (ctx) => {
-    const userId = (await getActiveUser(ctx))?._id;
-    if (!userId) return [];
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return [];
 
-    const nights = await ctx.db.query("movie_nights").order("desc").collect();
+    const nights = await ctx.db
+      .query("movie_nights")
+      .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
+      .order("desc")
+      .collect();
 
     return await Promise.all(
       nights.map(async (night) => {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Movie Night",
+  title: "MOVINIGHT",
   description: "Track movies with your crew",
 };
 

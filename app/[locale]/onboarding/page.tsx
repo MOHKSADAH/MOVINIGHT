@@ -32,7 +32,7 @@ export default function OnboardingPage() {
 
   // Nothing to collect if the provider already gave us a name (e.g. Google).
   useEffect(() => {
-    if (alreadyOnboarded) router.replace("/");
+    if (alreadyOnboarded) router.replace("/join-org");
   }, [alreadyOnboarded, router]);
 
   const trimmedName = name.trim();
@@ -45,7 +45,7 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       await updateUser({ name: trimmedName });
-      router.replace("/");
+      router.replace("/join-org");
     } catch {
       toast.error(t("saveFailed"));
       setSaving(false);

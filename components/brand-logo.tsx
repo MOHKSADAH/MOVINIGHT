@@ -10,7 +10,7 @@ type BrandLogoProps = {
 export function BrandLogo({
   className,
   priority = false,
-  alt = "Movie Night",
+  alt = "MOVINIGHT",
 }: BrandLogoProps) {
   return (
     <Image
