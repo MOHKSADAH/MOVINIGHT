@@ -3,6 +3,7 @@ import {
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
 import createMiddleware from "next-intl/middleware";
+import { NextResponse } from "next/server";
 import { AUTH_DISABLED } from "@/lib/auth-flags";
 import { routing } from "@/i18n/routing";
 
@@ -47,11 +48,21 @@ function withLocale(path: string, locale: string): string {
 }
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  const pathname = request.nextUrl.pathname;
+
+  // TMDB proxy: JSON 401 (not HTML login redirect). Route handlers also gate.
+  if (pathname.startsWith("/api/tmdb")) {
+    if (AUTH_DISABLED) return NextResponse.next();
+    if (!(await convexAuth.isAuthenticated())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   if (AUTH_DISABLED) {
     return handleI18nRouting(request);
   }
 
-  const pathname = request.nextUrl.pathname;
   const pathWithoutLocale = stripLocale(pathname);
   const locale = localeFromPath(pathname);
   const isAuthEntry =
@@ -76,8 +87,10 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
 export const config = {
   // Exclude most /api routes from i18n, but /api/auth MUST hit the proxy —
   // Convex Auth proxies signIn/signOut there. Without it, OTP posts get a Next 404.
+  // /api/tmdb is authenticated here so anonymous callers cannot burn the token.
   matcher: [
     "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
     "/api/auth",
+    "/api/tmdb/:path*",
   ],
 };

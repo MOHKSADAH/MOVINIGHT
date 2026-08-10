@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardTmdbApi } from "@/lib/tmdb-api-guard";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
 export async function GET(request: NextRequest) {
+  const blocked = await guardTmdbApi(request);
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");
   const languageParam = searchParams.get("language");
@@ -13,6 +17,13 @@ export async function GET(request: NextRequest) {
 
   if (!query) {
     return NextResponse.json({ results: [] });
+  }
+
+  if (query.length > 200) {
+    return NextResponse.json(
+      { error: "Query too long" },
+      { status: 400 },
+    );
   }
 
   const res = await fetch(

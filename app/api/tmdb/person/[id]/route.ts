@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardTmdbApi } from "@/lib/tmdb-api-guard";
+import { isTmdbNumericId } from "@/lib/tmdb-rate-limit";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
@@ -6,8 +8,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const blocked = await guardTmdbApi(request);
+  if (blocked) return blocked;
+
   const { id } = await params;
-  if (!/^\d+$/.test(id)) {
+  if (!isTmdbNumericId(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 

@@ -1,10 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/tmdb-api-guard", () => ({
+  guardTmdbApi: vi.fn(async () => null),
+}));
+
 import { GET } from "./route";
+import { guardTmdbApi } from "@/lib/tmdb-api-guard";
 
 describe("GET /api/tmdb/search", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.mocked(guardTmdbApi).mockResolvedValue(null);
   });
 
   it("returns empty results when query is missing", async () => {
@@ -45,5 +51,14 @@ describe("GET /api/tmdb/search", () => {
       results: [{ id: 1, title: "Dune" }],
     });
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("rejects overlong queries", async () => {
+    const response = await GET(
+      new Request(
+        `http://localhost/api/tmdb/search?query=${"a".repeat(201)}`,
+      ) as never,
+    );
+    expect(response.status).toBe(400);
   });
 });
