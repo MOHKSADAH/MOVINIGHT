@@ -110,13 +110,12 @@ export function PersonFilmographyDialog({
                 style={{ width: 80, height: 80, minWidth: 80, minHeight: 80 }}
               >
                 {(profile?.imageUrl ?? person?.imageUrl) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={profile?.imageUrl ?? person!.imageUrl!}
                     alt={displayName}
                     width={80}
                     height={80}
-                    decoding="async"
+                    unoptimized
                     className="h-full w-full max-w-none object-cover object-[center_15%]"
                     style={{ aspectRatio: "1 / 1" }}
                   />

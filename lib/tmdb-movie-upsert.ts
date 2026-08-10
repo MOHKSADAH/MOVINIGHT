@@ -205,6 +205,7 @@ export function getPersonFilmography(
       id: number;
       title: string;
       role: string;
+      roles: Set<string>;
       year: number | null;
       poster: string;
       rating?: number;
@@ -217,10 +218,12 @@ export function getPersonFilmography(
     const year = credit.release_date
       ? new Date(credit.release_date).getFullYear()
       : null;
+    const role = credit.character?.trim() || "Actor";
     byId.set(credit.id, {
       id: credit.id,
       title: credit.title,
-      role: credit.character?.trim() || "Actor",
+      role,
+      roles: new Set([role]),
       year: year && !Number.isNaN(year) ? year : null,
       poster: personPosterUrl(credit.poster_path),
       rating: credit.vote_average,
@@ -236,7 +239,8 @@ export function getPersonFilmography(
     const existing = byId.get(credit.id);
     const job = credit.job?.trim() || "Crew";
     if (existing) {
-      if (job === "Director" || !existing.role.includes(job)) {
+      if (job === "Director" || !existing.roles.has(job)) {
+        existing.roles.add(job);
         existing.role =
           job === "Director"
             ? `Director${existing.role !== "Actor" ? ` · ${existing.role}` : ""}`
@@ -248,6 +252,7 @@ export function getPersonFilmography(
       id: credit.id,
       title: credit.title,
       role: job,
+      roles: new Set([job]),
       year: year && !Number.isNaN(year) ? year : null,
       poster: personPosterUrl(credit.poster_path),
       rating: credit.vote_average,

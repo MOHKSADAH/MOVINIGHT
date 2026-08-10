@@ -33,10 +33,6 @@ function readConsentFromStorage(): CookieConsent | null {
   return cachedConsent;
 }
 
-export function getCookieConsent(): CookieConsent | null {
-  return readConsentFromStorage();
-}
-
 /**
  * Snapshot for useSyncExternalStore — must return the same reference when the
  * underlying store value has not changed (React 19 requirement).
@@ -72,7 +68,3 @@ export function subscribeCookieConsent(onStoreChange: () => void): () => void {
   };
 }
 
-/** Gate optional third-party scripts until the user opts in. */
-export function hasOptionalCookieConsent(): boolean {
-  return getCookieConsent()?.optional === true;
-}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { motion, useAnimation } from "framer-motion";
+import { LazyMotion, domAnimation, m, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { getLocalizedMovieTitle } from "@/lib/locale";
@@ -101,6 +101,7 @@ export function RouletteWheel({
   }
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <div className="flex flex-col items-center gap-6">
       <div className="relative">
         <div
@@ -114,7 +115,7 @@ export function RouletteWheel({
           }}
         />
 
-        <motion.svg
+        <m.svg
           animate={controls}
           width={size}
           height={size}
@@ -162,7 +163,7 @@ export function RouletteWheel({
             stroke="hsl(var(--border))"
             strokeWidth={2}
           />
-        </motion.svg>
+        </m.svg>
       </div>
 
       <Button
@@ -182,13 +183,13 @@ export function RouletteWheel({
       </Button>
 
       {winnerId && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-3"
         >
           {(() => {
-            const winner = movies.find((m) => m._id === winnerId);
+            const winner = movies.find((movie) => movie._id === winnerId);
             if (!winner) return null;
             const winnerTitle = getLocalizedMovieTitle(winner, locale);
             return (
@@ -213,8 +214,9 @@ export function RouletteWheel({
               </>
             );
           })()}
-        </motion.div>
+        </m.div>
       )}
     </div>
+    </LazyMotion>
   );
 }

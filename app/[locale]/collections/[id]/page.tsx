@@ -197,10 +197,7 @@ export default function CollectionDetailPage() {
                   className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/70 transition-colors"
                 >
                   {/* Poster */}
-                  <div
-                    className="relative aspect-2/3 bg-muted cursor-pointer"
-                    onClick={() => setDetailMovie(movie)}
-                  >
+                  <div className="relative aspect-2/3 bg-muted cursor-pointer">
                     {movie.poster && movie.poster !== "/placeholder.jpg" ? (
                       <Image
                         src={movie.poster}
@@ -214,8 +211,14 @@ export default function CollectionDetailPage() {
                         {movieTitle}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      className="absolute inset-0 z-[1] cursor-pointer border-0 bg-transparent p-0"
+                      onClick={() => setDetailMovie(movie)}
+                      aria-label={movieTitle}
+                    />
                     {movie.imdbRating && (
-                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
                         <span className="text-[10px] font-bold text-yellow-400">IMDb</span>
                         <span className="text-xs font-semibold text-white">
                           {movie.imdbRating.toFixed(1)}
@@ -225,7 +228,8 @@ export default function CollectionDetailPage() {
                     {collection.isOwner && (
                       <button
                         type="button"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
+                        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
+                        aria-label={tCommon("remove")}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemoveMovie(entry.entryId as Id<"collection_movies">);
@@ -238,7 +242,7 @@ export default function CollectionDetailPage() {
                   {/* Info */}
                   <div className="p-2.5 flex flex-col gap-1 flex-1">
                     <h3 className="font-medium text-xs leading-tight line-clamp-2">
-                      {movie.title}
+                      {movieTitle}
                     </h3>
                     <p className="text-[10px] text-muted-foreground">
                       {movie.releaseYear}

@@ -80,14 +80,12 @@ function PersonHeadshot({
       style={{ width: sizePx, height: sizePx, minWidth: sizePx, minHeight: sizePx }}
     >
       {imageUrl ? (
-        // Plain img avoids Next/Image fill quirks that stretch portrait headshots in circles.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={imageUrl}
           alt={name}
           width={sizePx}
           height={sizePx}
-          decoding="async"
+          unoptimized
           className="h-full w-full max-w-none object-cover object-[center_15%]"
           style={{ aspectRatio: "1 / 1" }}
         />
@@ -186,34 +184,35 @@ export function MovieDetailDialog({
   useEffect(() => {
     if (!open || cast.length === 0 || castVisible >= cast.length) return;
 
-    const observers: IntersectionObserver[] = [];
     const onHit: IntersectionObserverCallback = (entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
       setCastVisible((n) => Math.min(n + CAST_PAGE_SIZE, cast.length));
     };
 
+    let mobileObserver: IntersectionObserver | undefined;
+    let desktopObserver: IntersectionObserver | undefined;
+
     if (mobileCastSentinelRef.current) {
-      const mobileObserver = new IntersectionObserver(onHit, {
+      mobileObserver = new IntersectionObserver(onHit, {
         root: null,
         rootMargin: "120px",
         threshold: 0,
       });
       mobileObserver.observe(mobileCastSentinelRef.current);
-      observers.push(mobileObserver);
     }
 
     if (desktopCastSentinelRef.current && castScrollRef.current) {
-      const desktopObserver = new IntersectionObserver(onHit, {
+      desktopObserver = new IntersectionObserver(onHit, {
         root: castScrollRef.current,
         rootMargin: "80px",
         threshold: 0,
       });
       desktopObserver.observe(desktopCastSentinelRef.current);
-      observers.push(desktopObserver);
     }
 
     return () => {
-      for (const observer of observers) observer.disconnect();
+      mobileObserver?.disconnect();
+      desktopObserver?.disconnect();
     };
   }, [open, cast.length, castVisible]);
 

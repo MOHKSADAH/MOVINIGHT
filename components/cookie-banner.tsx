@@ -8,7 +8,6 @@ import {
   getCookieConsentServerSnapshot,
   getCookieConsentSnapshot,
   setCookieConsent,
-  type CookieConsent,
   subscribeCookieConsent,
 } from "@/lib/cookie-consent";
 
@@ -23,10 +22,6 @@ export function CookieBanner() {
 
   // Hide once the user has saved a preference.
   if (consent !== null) return null;
-
-  const save = (next: CookieConsent) => {
-    setCookieConsent(next);
-  };
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 p-4 shadow-lg backdrop-blur-md">
@@ -64,7 +59,11 @@ export function CookieBanner() {
             variant="outline"
             size="sm"
             onClick={() =>
-              save({ necessary: true, optional: false, updatedAt: Date.now() })
+              setCookieConsent({
+                necessary: true,
+                optional: false,
+                updatedAt: Date.now(),
+              })
             }
           >
             {t("cookieNecessaryOnly")}
@@ -73,7 +72,7 @@ export function CookieBanner() {
             type="button"
             size="sm"
             onClick={() =>
-              save({
+              setCookieConsent({
                 necessary: true,
                 optional,
                 updatedAt: Date.now(),

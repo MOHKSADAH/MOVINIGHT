@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
@@ -43,6 +43,20 @@ import { DayPicker } from "react-day-picker";
 import { format } from "date-fns";
 import "react-day-picker/style.css";
 
+function subscribeNoop() {
+  return () => {};
+}
+
+function getLocalDayStartMs(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function useLocalDayStart(): Date {
+  const ms = useSyncExternalStore(subscribeNoop, getLocalDayStartMs, getLocalDayStartMs);
+  return new Date(ms);
+}
 const PAGE_SIZE = 12;
 
 type WatchedEntry = {
@@ -99,7 +113,7 @@ function LogMovieDialog({
   const [nightId, setNightId] = useState<string>("none");
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [today, setToday] = useState<Date | null>(null);
+  const today = useLocalDayStart();
 
   const upsertMovie = useMutation(api.movies.upsertMovie);
   const addWatchedEntry = useMutation(api.watched.addWatchedEntry);
@@ -107,10 +121,6 @@ function LogMovieDialog({
   const nights = useQuery(api.nights.getNights);
 
   const pastNights = nights?.filter((n) => n.status === "done") ?? [];
-
-  useEffect(() => {
-    setToday(new Date());
-  }, []);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -331,7 +341,7 @@ function LogMovieDialog({
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                disabled={today ? { after: today } : undefined}
+                disabled={{ after: today }}
               />
             </div>
             {!date && (

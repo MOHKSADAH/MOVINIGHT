@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
@@ -127,12 +127,13 @@ export default function JoinOrgPage() {
       await acceptLegal({});
       // Stay on this page when org setup is still required; the gate query
       // will swap the UI to create/join. Only leave once both gates clear.
-      if (!gate.needsOrg) router.replace("/");
+      if (!gate.needsOrg) {
+        router.replace("/");
+      }
     } catch {
       toast.error(t("acceptLegalFailed"));
-      setSaving(false);
     } finally {
-      if (gate.needsOrg) setSaving(false);
+      setSaving(false);
     }
   };
 
@@ -153,6 +154,7 @@ export default function JoinOrgPage() {
       router.replace("/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("createFailed"));
+    } finally {
       setSaving(false);
     }
   };
@@ -171,6 +173,7 @@ export default function JoinOrgPage() {
       router.replace("/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("joinFailed"));
+    } finally {
       setSaving(false);
     }
   };
@@ -185,14 +188,18 @@ export default function JoinOrgPage() {
   };
 
   const termsBlock = (
-    <label className="flex items-start gap-2 text-sm leading-relaxed">
-      <input
-        type="checkbox"
-        className="mt-1 size-4 shrink-0 accent-primary"
-        checked={terms}
-        onChange={(e) => setTerms(e.target.checked)}
-      />
-      <span>
+    <div className="flex items-start gap-2 text-sm leading-relaxed">
+      <label htmlFor="terms-checkbox" className="mt-1 shrink-0 cursor-pointer">
+        <input
+          id="terms-checkbox"
+          type="checkbox"
+          className="size-4 accent-primary"
+          checked={terms}
+          aria-labelledby="terms-agreement-text"
+          onChange={(e) => setTerms(e.target.checked)}
+        />
+      </label>
+      <span id="terms-agreement-text">
         {t("termsAgreePrefix")}{" "}
         <button
           type="button"
@@ -211,10 +218,11 @@ export default function JoinOrgPage() {
         </button>
         .
       </span>
-    </label>
+    </div>
   );
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <div className="auth-stage relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="auth-stage-glow pointer-events-none absolute inset-0" aria-hidden />
       <div
@@ -231,7 +239,7 @@ export default function JoinOrgPage() {
         </header>
 
         <main className="auth-enter-delay flex flex-1 flex-col justify-center py-8">
-          <motion.div
+          <m.div
             className="flex flex-col gap-5 rounded-lg border border-border/80 bg-card/70 p-5 shadow-sm backdrop-blur-sm"
             initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -239,7 +247,7 @@ export default function JoinOrgPage() {
           >
             <AnimatePresence mode="wait" initial={false}>
               {needsTermsFirst && !gate.needsOrg ? (
-                <motion.div
+                <m.div
                   key={panelKey}
                   className="flex flex-col gap-5"
                   {...fadeSlide}
@@ -258,9 +266,9 @@ export default function JoinOrgPage() {
                   >
                     {t("acceptLegal")}
                   </Button>
-                </motion.div>
+                </m.div>
               ) : (
-                <motion.div
+                <m.div
                   key={panelKey}
                   className="flex flex-col gap-5"
                   {...fadeSlide}
@@ -296,7 +304,7 @@ export default function JoinOrgPage() {
                   <div className="relative overflow-hidden">
                     <AnimatePresence mode="wait" initial={false}>
                       {mode === "join" ? (
-                        <motion.form
+                        <m.form
                           key="join"
                           noValidate
                           className="flex flex-col gap-4"
@@ -342,9 +350,9 @@ export default function JoinOrgPage() {
                           >
                             {t("joinSubmit")}
                           </Button>
-                        </motion.form>
+                        </m.form>
                       ) : (
-                        <motion.form
+                        <m.form
                           key="create"
                           noValidate
                           className="flex flex-col gap-4"
@@ -417,14 +425,14 @@ export default function JoinOrgPage() {
                           >
                             {t("createSubmit")}
                           </Button>
-                        </motion.form>
+                        </m.form>
                       )}
                     </AnimatePresence>
                   </div>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </m.div>
         </main>
       </div>
 
@@ -436,5 +444,6 @@ export default function JoinOrgPage() {
         }}
       />
     </div>
+    </LazyMotion>
   );
 }

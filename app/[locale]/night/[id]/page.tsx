@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { getDateFnsLocale, getLocalizedMovieOverview, getLocalizedMovieTitle } from "@/lib/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
 import { StarRating } from "@/components/star-rating";
 import Image from "next/image";
 
@@ -375,8 +375,9 @@ export default function NightRoomPage() {
           {/* Picked movie tab */}
           {night.pickedMovieData && (
             <TabsContent value="picked" className="pt-6">
+              <LazyMotion features={domAnimation} strict>
               <AnimatePresence>
-                <motion.div
+                <m.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center gap-6 text-center"
@@ -430,8 +431,9 @@ export default function NightRoomPage() {
                     </p>
                       ) : null;
                     })()}
-                </motion.div>
+                </m.div>
               </AnimatePresence>
+              </LazyMotion>
             </TabsContent>
           )}
         </Tabs>
