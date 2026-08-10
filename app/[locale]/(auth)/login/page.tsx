@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +38,10 @@ function GoogleIcon() {
   );
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export default function LoginPage() {
   const { signIn } = useAuthActions();
   const router = useRouter();
@@ -42,13 +52,24 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string>();
+  const [codeError, setCodeError] = useState<string>();
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setEmailError(t("emailRequired"));
+      return;
+    }
+    if (!isValidEmail(trimmed)) {
+      setEmailError(t("emailInvalid"));
+      return;
+    }
+    setEmailError(undefined);
     setLoading(true);
     try {
-      await signIn("email-otp", { email: email.trim() });
+      await signIn("email-otp", { email: trimmed });
       setStep("code");
       toast.success(t("toastCodeSent"));
     } catch (error) {
@@ -65,10 +86,19 @@ export default function LoginPage() {
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setCodeError(t("codeRequired"));
+      return;
+    }
+    if (trimmed.length !== 6) {
+      setCodeError(t("codeInvalid"));
+      return;
+    }
+    setCodeError(undefined);
     setLoading(true);
     try {
-      await signIn("email-otp", { email: email.trim(), code: code.trim() });
+      await signIn("email-otp", { email: email.trim(), code: trimmed });
       router.push("/");
     } catch {
       toast.error(t("toastInvalidCode"));
@@ -80,6 +110,7 @@ export default function LoginPage() {
   const handleResend = async () => {
     setLoading(true);
     setCode("");
+    setCodeError(undefined);
     try {
       await signIn("email-otp", { email: email.trim() });
       toast.success(t("toastNewCodeSent"));
@@ -122,6 +153,7 @@ export default function LoginPage() {
             onClick={() => {
               setStep("email");
               setCode("");
+              setCodeError(undefined);
             }}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -153,25 +185,26 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-3">
-              <div className="space-y-2.5">
-                <label
-                  className="mb-0.5 block text-sm font-medium leading-snug"
-                  htmlFor="email"
-                >
-                  {t("emailLabel")}
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t("emailPlaceholder")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  autoFocus
-                />
-              </div>
+            <form onSubmit={handleEmailSubmit} noValidate className="space-y-3">
+              <FieldGroup>
+                <Field data-invalid={emailError ? true : undefined}>
+                  <FieldLabel htmlFor="email">{t("emailLabel")}</FieldLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder={t("emailPlaceholder")}
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError(undefined);
+                    }}
+                    autoComplete="email"
+                    autoFocus
+                    aria-invalid={emailError ? true : undefined}
+                  />
+                  <FieldError>{emailError}</FieldError>
+                </Field>
+              </FieldGroup>
               <Button type="submit" className="w-full gap-2" disabled={loading}>
                 <Mail className="h-4 w-4" />
                 {loading ? t("sendingCode") : t("sendSignInCode")}
@@ -181,28 +214,28 @@ export default function LoginPage() {
         )}
 
         {step === "code" && (
-          <form onSubmit={handleCodeSubmit} className="space-y-3 pt-1">
-            <div className="space-y-2.5">
-              <label
-                className="mb-0.5 block text-sm font-medium leading-snug"
-                htmlFor="code"
-              >
-                {t("sixDigitCodeLabel")}
-              </label>
-              <Input
-                id="code"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder={t("codePlaceholder")}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                required
-                autoFocus
-                className="text-center text-lg tracking-widest font-mono h-11"
-              />
-            </div>
+          <form onSubmit={handleCodeSubmit} noValidate className="space-y-3 pt-1">
+            <FieldGroup>
+              <Field data-invalid={codeError ? true : undefined}>
+                <FieldLabel htmlFor="code">{t("sixDigitCodeLabel")}</FieldLabel>
+                <Input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder={t("codePlaceholder")}
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, ""));
+                    if (codeError) setCodeError(undefined);
+                  }}
+                  autoFocus
+                  aria-invalid={codeError ? true : undefined}
+                  className="h-11 text-center font-mono text-lg tracking-widest"
+                />
+                <FieldError>{codeError}</FieldError>
+              </Field>
+            </FieldGroup>
             <Button
               type="submit"
               className="w-full"

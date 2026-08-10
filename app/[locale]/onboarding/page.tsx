@@ -120,7 +120,6 @@ export default function OnboardingPage() {
                   maxLength={NAME_MAX_LENGTH}
                   autoFocus
                   autoComplete="name"
-                  required
                 />
                 <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
               </div>
