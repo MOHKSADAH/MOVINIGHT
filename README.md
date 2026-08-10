@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Track movies with your crew.</strong><br />
-  Vote the watchlist, schedule the night, spin the wheel, rate what you watched —<br />
+  Vote the watchlist, schedule the night, spin the wheel, rate what you watched,<br />
   then argue about it forever on the Hall of Fame.
 </p>
 
@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/movinight-readme-hero.svg" alt="MOVINIGHT — track movies with your crew" width="100%" />
+  <img src="docs/assets/movinight-readme-hero.svg" alt="MOVINIGHT - track movies with your crew" width="100%" />
 </p>
 
 MOVINIGHT is a real-time group movie tracker for friends who already have a ritual: pick something, watch together, keep score. It is a bilingual (**English** / **Arabic**) Next.js app on Convex, with organizations, invites, curated collections, and even a “where do we eat?” board for after the credits.
@@ -40,17 +40,17 @@ MOVINIGHT is a real-time group movie tracker for friends who already have a ritu
 > **Who picked this?** · Product: [whopickedthis.app](https://www.whopickedthis.app) · Operator: Mohammad K. Alsadah
 
 <p align="center">
-  <img src="public/avatars/noir.svg" width="48" alt="" />
-  <img src="public/avatars/kaiju.svg" width="48" alt="" />
-  <img src="public/avatars/vampire.svg" width="48" alt="" />
-  <img src="public/avatars/astronaut.svg" width="48" alt="" />
-  <img src="public/avatars/samurai.svg" width="48" alt="" />
-  <img src="public/avatars/wizard.svg" width="48" alt="" />
-  <img src="public/avatars/ninja.svg" width="48" alt="" />
-  <img src="public/avatars/cowboy.svg" width="48" alt="" />
+  <img src="public/avatars/aria.svg" width="48" alt="Aria" />
+  <img src="public/avatars/blake.svg" width="48" alt="Blake" />
+  <img src="public/avatars/casey.svg" width="48" alt="Casey" />
+  <img src="public/avatars/devon.svg" width="48" alt="Devon" />
+  <img src="public/avatars/ellis.svg" width="48" alt="Ellis" />
+  <img src="public/avatars/finn.svg" width="48" alt="Finn" />
+  <img src="public/avatars/harper.svg" width="48" alt="Harper" />
+  <img src="public/avatars/indie.svg" width="48" alt="Indie" />
 </p>
 
-<p align="center"><sub>Crew avatar presets ship with the app — pick a face on onboarding.</sub></p>
+<p align="center"><sub>Lorelei crew presets ship with the app - pick a face on onboarding (themed classics stay in the picker too).</sub></p>
 
 ---
 
@@ -58,7 +58,7 @@ MOVINIGHT is a real-time group movie tracker for friends who already have a ritu
 
 Shared lists in chat die. Spreadsheets get ignored. Someone always “forgets” who suggested what.
 
-MOVINIGHT keeps the crew’s **watchlist, votes, calendar nights, ratings, and bragging rights** in one place that updates for everyone at once. The product assumption is small: you are not running a cinema — you are running a recurring hangout with opinions.
+MOVINIGHT keeps the crew’s **watchlist, votes, calendar nights, ratings, and bragging rights** in one place that updates for everyone at once. The product assumption is small: you are not running a cinema; you are running a recurring hangout with opinions.
 
 ---
 
@@ -68,10 +68,10 @@ MOVINIGHT keeps the crew’s **watchlist, votes, calendar nights, ratings, and b
 | --- | --- |
 | **Watchlist** | Search TMDB, add titles, upvote / downvote, filter & sort. Query state (`q`, `sort`, `page`) lives in the URL via `nuqs`. |
 | **Movie nights** | Schedule on the calendar, pull candidates, vote, spin the roulette, wrap up with ratings. |
-| **Watched history** | Poster grid of everything logged — personal notes, group averages, search. |
+| **Watched history** | Poster grid of everything logged: personal notes, group averages, search. |
 | **Collections** | Curated lists for moods and occasions (seeded + crew-owned). |
-| **Hall of Fame** | Leaderboards, charts, roasts — the year so far, weaponized. |
-| **Food** | “Where should we eat tonight?” — restaurants by city, category, price, votes. |
+| **Hall of Fame** | Leaderboards, charts, roasts: the year so far, weaponized. |
+| **Food** | “Where should we eat tonight?”: restaurants by city, category, price, votes. |
 | **Crew & orgs** | Organizations with join codes and email invites; profiles, avatars, ownership. |
 | **Locales** | Full UI in **English** and **Arabic** (RTL) via `next-intl`. |
 | **Trust** | Cookie consent, Terms / Privacy / FAQ, PDPL-aware onboarding gates. |
@@ -120,7 +120,7 @@ flowchart TB
   Sched --> Resend
 ```
 
-**Data rule of thumb:** Convex owns reactive server state. The Next.js app owns routing, i18n, TMDB HTTP proxies, and ephemeral UI. URL query params own shareable filter/pagination state on the watchlist — not a second client store.
+**Data rule of thumb:** Convex owns reactive server state. The Next.js app owns routing, i18n, TMDB HTTP proxies, and ephemeral UI. URL query params own shareable filter/pagination state on the watchlist, not a second client store.
 
 ---
 
@@ -138,10 +138,10 @@ stateDiagram-v2
   Logged --> [*]
 ```
 
-1. **Schedule** — pick a date on the calendar.
-2. **Candidates** — pull from the shared watchlist (or search TMDB).
-3. **Decide** — vote, then spin the wheel if the room is deadlocked.
-4. **Log** — mark watched, rate, optionally roast forever on Hall of Fame.
+1. **Schedule:** pick a date on the calendar.
+2. **Candidates:** pull from the shared watchlist (or search TMDB).
+3. **Decide:** vote, then spin the wheel if the room is deadlocked.
+4. **Log:** mark watched, rate, optionally roast forever on Hall of Fame.
 
 ---
 
@@ -179,7 +179,7 @@ flowchart LR
 | Motion | **Framer Motion** (`LazyMotion`) | Roulette, auth stage, pickers |
 | Quality | ESLint + Convex plugin, Vitest, `convex-test`, React Doctor, Husky | Lint → types → tests → build in CI |
 
-**Hard project bans (by design):** do not introduce Zod or react-hook-form for product forms — use shadcn `Field` + local state.
+**Hard project bans (by design):** do not introduce Zod or react-hook-form for product forms; use shadcn `Field` + local state.
 
 ---
 
@@ -217,7 +217,7 @@ lib/                   Locale, ratings, TMDB helpers, consent
 
 | File | Purpose |
 | --- | --- |
-| [LICENSE](LICENSE) | Proprietary — all rights reserved |
+| [LICENSE](LICENSE) | Proprietary, all rights reserved |
 | [SECURITY.md](SECURITY.md) | How to report vulnerabilities |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branch, commit, and PR conventions |
 | [`.env.example`](.env.example) | Local + Convex env template |
@@ -267,10 +267,10 @@ Convex-only secrets also belong in the **Convex dashboard** (Deployment → Envi
 Use two terminals:
 
 ```bash
-# Terminal A — backend (watches convex/, syncs schema)
+# Terminal A: backend (watches convex/, syncs schema)
 npx convex dev
 
-# Terminal B — frontend
+# Terminal B: frontend
 npm run dev
 ```
 
@@ -316,7 +316,7 @@ flowchart LR
 - **Husky**: pre-commit lint via `prepare`
 - **Unit tests today:** pagination helpers, org-code normalization, movie query/auth rejection (`convex-test`), TMDB search Route Handler
 
-Forms stay **shadcn `Field` + local state** — that is intentional, not an oversight.
+Forms stay **shadcn `Field` + local state**. That is intentional, not an oversight.
 
 ---
 
@@ -340,13 +340,13 @@ Forms stay **shadcn `Field` + local state** — that is intentional, not an over
 
 ## License & credits
 
-**License:** [Proprietary — all rights reserved](LICENSE). © 2024–2026 Mohammad K. Alsadah.
+**License:** [Proprietary - all rights reserved](LICENSE). © 2024-2026 Mohammad K. Alsadah.
 
 Movie metadata and imagery courtesy of [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is **not** endorsed or certified by TMDB.
 
 Open-source dependencies keep their own licenses (see `package.json` / each package).
 
-**Security disclosures:** see [SECURITY.md](SECURITY.md) — please email rather than filing a public issue.
+**Security disclosures:** see [SECURITY.md](SECURITY.md). Please email rather than filing a public issue.
 
 **Contact:** [mohmadksadah@gmail.com](mailto:mohmadksadah@gmail.com)
 
