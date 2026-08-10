@@ -12,6 +12,7 @@
   "optional": "(optional)",
   "optionalPlain": "Optional",
   "name": "Name",
+  "nameRequired": "Enter a name.",
   "note": "Note",
   "noteOptional": "Note (optional)",
   "imdb": "IMDb",

@@ -7,6 +7,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -123,6 +129,8 @@ export default function FoodPage() {
   const [city, setCity] = useState<"" | RestaurantCity>("");
   const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [nameError, setNameError] = useState<string>();
+  const [categoryError, setCategoryError] = useState<string>();
 
   const restaurants = useQuery(api.restaurants.getRestaurants);
   const addRestaurant = useMutation(api.restaurants.addRestaurant);
@@ -148,11 +156,18 @@ export default function FoodPage() {
     setPriceRange("");
     setCity("");
     setImageUrl("");
+    setNameError(undefined);
+    setCategoryError(undefined);
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !category) return;
+    const nextNameError = !name.trim() ? t("nameRequired") : undefined;
+    const nextCategoryError = !category ? t("categoryRequired") : undefined;
+    setNameError(nextNameError);
+    setCategoryError(nextCategoryError);
+    if (nextNameError || nextCategoryError) return;
+
     setSaving(true);
     try {
       await addRestaurant({
@@ -371,130 +386,143 @@ export default function FoodPage() {
         )}
       </div>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) resetForm();
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("addDialogTitle")}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={(e) => void handleAdd(e)} className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="restaurant-name">
-                {tCommon("name")}
-              </label>
-              <Input
-                id="restaurant-name"
-                placeholder={t("restaurantNamePlaceholder")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium"
-                htmlFor="restaurant-category"
-              >
-                {t("categoryLabel")}
-              </label>
-              <select
-                id="restaurant-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <option value="">{t("selectCategory")}</option>
-                {CATEGORY_SLUGS.filter((c) => c !== "All").map((cat) => (
-                  <option key={cat} value={cat}>
-                    {categoryLabel(cat, t)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="restaurant-city">
-                {t("cityLabel")}
-              </label>
-              <select
-                id="restaurant-city"
-                value={city}
-                onChange={(e) =>
-                  setCity(e.target.value as "" | RestaurantCity)
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <option value="">{tCommon("optionalPlain")}</option>
-                <option value="dammam">{t("cityDammam")}</option>
-                <option value="saihat">{t("citySaihat")}</option>
-                <option value="qatif">{t("cityQatif")}</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label
-                  className="text-sm font-medium text-muted-foreground"
-                  htmlFor="restaurant-price"
-                >
-                  {t("priceRangeLabel")}
-                </label>
+          <form
+            onSubmit={(e) => void handleAdd(e)}
+            noValidate
+            className="space-y-3"
+          >
+            <FieldGroup className="gap-3">
+              <Field data-invalid={nameError ? true : undefined}>
+                <FieldLabel htmlFor="restaurant-name">{tCommon("name")}</FieldLabel>
+                <Input
+                  id="restaurant-name"
+                  placeholder={t("restaurantNamePlaceholder")}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (nameError) setNameError(undefined);
+                  }}
+                  autoFocus
+                  aria-invalid={nameError ? true : undefined}
+                />
+                <FieldError>{nameError}</FieldError>
+              </Field>
+              <Field data-invalid={categoryError ? true : undefined}>
+                <FieldLabel htmlFor="restaurant-category">
+                  {t("categoryLabel")}
+                </FieldLabel>
                 <select
-                  id="restaurant-price"
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
+                  id="restaurant-category"
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    if (categoryError) setCategoryError(undefined);
+                  }}
+                  aria-invalid={categoryError ? true : undefined}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
-                  <option value="">{tCommon("optionalPlain")}</option>
-                  {PRICE_RANGES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
+                  <option value="">{t("selectCategory")}</option>
+                  {CATEGORY_SLUGS.filter((c) => c !== "All").map((cat) => (
+                    <option key={cat} value={cat}>
+                      {categoryLabel(cat, t)}
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="space-y-1">
-                <label
-                  className="text-sm font-medium text-muted-foreground"
-                  htmlFor="restaurant-address"
+                <FieldError>{categoryError}</FieldError>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="restaurant-city">{t("cityLabel")}</FieldLabel>
+                <select
+                  id="restaurant-city"
+                  value={city}
+                  onChange={(e) =>
+                    setCity(e.target.value as "" | RestaurantCity)
+                  }
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
-                  {t("addressLabel")}
-                </label>
-                <Input
-                  id="restaurant-address"
-                  placeholder={tCommon("optionalPlain")}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
+                  <option value="">{tCommon("optionalPlain")}</option>
+                  <option value="dammam">{t("cityDammam")}</option>
+                  <option value="saihat">{t("citySaihat")}</option>
+                  <option value="qatif">{t("cityQatif")}</option>
+                </select>
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field>
+                  <FieldLabel
+                    htmlFor="restaurant-price"
+                    className="text-muted-foreground"
+                  >
+                    {t("priceRangeLabel")}
+                  </FieldLabel>
+                  <select
+                    id="restaurant-price"
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">{tCommon("optionalPlain")}</option>
+                    {PRICE_RANGES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field>
+                  <FieldLabel
+                    htmlFor="restaurant-address"
+                    className="text-muted-foreground"
+                  >
+                    {t("addressLabel")}
+                  </FieldLabel>
+                  <Input
+                    id="restaurant-address"
+                    placeholder={tCommon("optionalPlain")}
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </Field>
               </div>
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium text-muted-foreground"
-                htmlFor="restaurant-image"
-              >
-                {t("imageUrlLabel")}
-              </label>
-              <Input
-                id="restaurant-image"
-                placeholder={t("imageUrlPlaceholder")}
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium text-muted-foreground"
-                htmlFor="restaurant-notes"
-              >
-                {t("notesLabel")}
-              </label>
-              <Input
-                id="restaurant-notes"
-                placeholder={t("notesPlaceholder")}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
+              <Field>
+                <FieldLabel
+                  htmlFor="restaurant-image"
+                  className="text-muted-foreground"
+                >
+                  {t("imageUrlLabel")}
+                </FieldLabel>
+                <Input
+                  id="restaurant-image"
+                  placeholder={t("imageUrlPlaceholder")}
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel
+                  htmlFor="restaurant-notes"
+                  className="text-muted-foreground"
+                >
+                  {t("notesLabel")}
+                </FieldLabel>
+                <Input
+                  id="restaurant-notes"
+                  placeholder={t("notesPlaceholder")}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
             <DialogFooter className="gap-2 pt-1">
               <Button
                 type="button"
@@ -503,10 +531,7 @@ export default function FoodPage() {
               >
                 {tCommon("cancel")}
               </Button>
-              <Button
-                type="submit"
-                disabled={saving || !name.trim() || !category}
-              >
+              <Button type="submit" disabled={saving}>
                 {saving ? tCommon("adding") : tCommon("add")}
               </Button>
             </DialogFooter>

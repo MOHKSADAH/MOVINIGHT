@@ -4,6 +4,7 @@
   "newCollection": "مجموعة جديدة",
   "createDialogTitle": "مجموعة جديدة",
   "namePlaceholder": "ليلة رعب، كلاسيكيات التسعينات...",
+  "nameRequired": "أدخل اسم المجموعة.",
   "descriptionOptional": "الوصف (اختياري)",
   "descriptionPlaceholder": "عن ماذا تتحدث هذه المجموعة؟",
   "toastCreated": "تم إنشاء المجموعة",

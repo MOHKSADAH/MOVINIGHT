@@ -12,6 +12,7 @@
   "optional": "(اختياري)",
   "optionalPlain": "اختياري",
   "name": "الاسم",
+  "nameRequired": "أدخل اسماً.",
   "note": "ملاحظة",
   "noteOptional": "ملاحظة (اختياري)",
   "imdb": "IMDb",

@@ -99,6 +99,7 @@ export default function OnboardingPage() {
           ) : (
             <form
               onSubmit={(e) => void handleSubmit(e)}
+              noValidate
               className="space-y-6 rounded-lg border border-border/80 bg-card/70 p-5 shadow-sm backdrop-blur-sm"
             >
               <div className="space-y-1.5 text-center">

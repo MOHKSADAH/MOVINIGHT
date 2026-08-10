@@ -31,6 +31,8 @@
   "invites": "دعوات معلّقة",
   "inviteEmail": "دعوة بالبريد",
   "inviteEmailPlaceholder": "friend@email.com",
+  "inviteEmailRequired": "أدخل بريداً إلكترونياً.",
+  "inviteEmailInvalid": "أدخل بريداً إلكترونياً صالحاً.",
   "sendInvite": "إرسال الدعوة",
   "inviteSent": "تم إرسال الدعوة",
   "inviteFailed": "تعذر إرسال الدعوة",

@@ -5,6 +5,12 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -30,13 +36,24 @@ export default function CollectionsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [nameError, setNameError] = useState<string>();
 
   const collections = useQuery(api.collections.getCollections);
   const createCollection = useMutation(api.collections.createCollection);
 
+  const resetCreateForm = () => {
+    setName("");
+    setDescription("");
+    setNameError(undefined);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setNameError(t("nameRequired"));
+      return;
+    }
+    setNameError(undefined);
     setSaving(true);
     try {
       await createCollection({
@@ -44,8 +61,7 @@ export default function CollectionsPage() {
         description: description.trim() || undefined,
       });
       toast.success(t("toastCreated"));
-      setName("");
-      setDescription("");
+      resetCreateForm();
       setCreateOpen(false);
     } catch {
       toast.error(t("toastCreateFailed"));
@@ -140,39 +156,49 @@ export default function CollectionsPage() {
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("createDialogTitle")}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="collection-name">
-                {tCommon("name")}
-              </label>
-              <Input
-                id="collection-name"
-                placeholder={t("namePlaceholder")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                className="text-sm font-medium text-muted-foreground"
-                htmlFor="collection-description"
-              >
-                {t("descriptionOptional")}
-              </label>
-              <Input
-                id="collection-description"
-                placeholder={t("descriptionPlaceholder")}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
+          <form onSubmit={(e) => void handleCreate(e)} noValidate className="space-y-3">
+            <FieldGroup className="gap-3">
+              <Field data-invalid={nameError ? true : undefined}>
+                <FieldLabel htmlFor="collection-name">{tCommon("name")}</FieldLabel>
+                <Input
+                  id="collection-name"
+                  placeholder={t("namePlaceholder")}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (nameError) setNameError(undefined);
+                  }}
+                  autoFocus
+                  aria-invalid={nameError ? true : undefined}
+                />
+                <FieldError>{nameError}</FieldError>
+              </Field>
+              <Field>
+                <FieldLabel
+                  htmlFor="collection-description"
+                  className="text-muted-foreground"
+                >
+                  {t("descriptionOptional")}
+                </FieldLabel>
+                <Input
+                  id="collection-description"
+                  placeholder={t("descriptionPlaceholder")}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </Field>
+            </FieldGroup>
             <DialogFooter className="gap-2 pt-1">
               <Button
                 type="button"
@@ -181,7 +207,7 @@ export default function CollectionsPage() {
               >
                 {tCommon("cancel")}
               </Button>
-              <Button type="submit" disabled={saving || !name.trim()}>
+              <Button type="submit" disabled={saving}>
                 {saving ? tCommon("creating") : tCommon("create")}
               </Button>
             </DialogFooter>
