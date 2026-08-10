@@ -1,0 +1,28 @@
+Copyright (c) 2024–2026 Mohammad K. Alsadah (MOHAMMAD K. ALSADAH)
+
+All rights reserved.
+
+This software and associated documentation files (the "Software"), including
+the MOVINIGHT / movie-night application, branding, and related materials, are
+the proprietary property of the copyright holder.
+
+Permission is granted to view this repository for evaluation and personal
+reference only when access has been explicitly granted by the copyright holder.
+
+You may not copy, modify, merge, publish, distribute, sublicense, sell, host,
+or commercially exploit the Software, in whole or in part, without prior
+written permission from the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Third-party notices:
+- Movie metadata and artwork are provided by The Movie Database (TMDB).
+  This product uses the TMDB API but is not endorsed or certified by TMDB.
+- Open-source dependencies retain their respective licenses (see package.json
+  and the licenses of each package).

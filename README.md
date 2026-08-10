@@ -1,10 +1,56 @@
-# MOVINIGHT
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="MOVINIGHT logo" width="120" />
+</p>
 
-**Track movies with your crew.** Vote the watchlist, schedule the night, spin the wheel, rate what you watched — then argue about it forever on the Hall of Fame.
+<h1 align="center">MOVINIGHT</h1>
 
-MOVINIGHT is a real-time group movie tracker for friends who already have a ritual: pick something, watch together, keep score. It is built as a bilingual (English / Arabic) Next.js app on Convex, with organizations, invites, curated collections, and even a “where do we eat?” board for after the credits.
+<p align="center">
+  <strong>Track movies with your crew.</strong><br />
+  Vote the watchlist, schedule the night, spin the wheel, rate what you watched —<br />
+  then argue about it forever on the Hall of Fame.
+</p>
 
-> Live product orientation: [whopickedthis.app](https://www.whopickedthis.app) · Repo: `movie-night`
+<p align="center">
+  <a href="https://www.whopickedthis.app">Live site</a>
+  ·
+  <a href="#getting-started">Getting started</a>
+  ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+  ·
+  <a href="LICENSE">License</a>
+</p>
+
+<p align="center">
+  <img alt="CI" src="https://github.com/MOHKSADAH/MOVINIGHT/actions/workflows/ci.yml/badge.svg" />
+  <img alt="React Doctor" src="https://github.com/MOHKSADAH/MOVINIGHT/actions/workflows/react-doctor.yml/badge.svg" />
+  <img alt="License" src="https://img.shields.io/badge/license-Proprietary-important" />
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-black" />
+  <img alt="Convex" src="https://img.shields.io/badge/Convex-realtime-blue" />
+  <img alt="i18n" src="https://img.shields.io/badge/i18n-en%20%7C%20ar-success" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/movinight-readme-hero.svg" alt="MOVINIGHT — track movies with your crew" width="100%" />
+</p>
+
+MOVINIGHT is a real-time group movie tracker for friends who already have a ritual: pick something, watch together, keep score. It is a bilingual (**English** / **Arabic**) Next.js app on Convex, with organizations, invites, curated collections, and even a “where do we eat?” board for after the credits.
+
+> **Who picked this?** · Product: [whopickedthis.app](https://www.whopickedthis.app) · Operator: Mohammad K. Alsadah
+
+<p align="center">
+  <img src="public/avatars/noir.svg" width="48" alt="" />
+  <img src="public/avatars/kaiju.svg" width="48" alt="" />
+  <img src="public/avatars/vampire.svg" width="48" alt="" />
+  <img src="public/avatars/astronaut.svg" width="48" alt="" />
+  <img src="public/avatars/samurai.svg" width="48" alt="" />
+  <img src="public/avatars/wizard.svg" width="48" alt="" />
+  <img src="public/avatars/ninja.svg" width="48" alt="" />
+  <img src="public/avatars/cowboy.svg" width="48" alt="" />
+</p>
+
+<p align="center"><sub>Crew avatar presets ship with the app — pick a face on onboarding.</sub></p>
 
 ---
 
@@ -157,13 +203,26 @@ app/[locale]/          Locale-aware pages (en | ar)
   about|faq|terms|…    Legal & docs
 
 app/api/tmdb/          Server proxies to TMDB
-
+public/logo.svg        Brand mark
+public/avatars/        Preset crew avatars
+docs/assets/           README images
 components/            App shell, cards, search, UI primitives
 convex/                Schema, auth, domain modules, migrations
 messages/{en,ar}/      next-intl catalogs
 i18n/                  Routing + navigation helpers
 lib/                   Locale, ratings, TMDB helpers, consent
 ```
+
+### Important project files
+
+| File | Purpose |
+| --- | --- |
+| [LICENSE](LICENSE) | Proprietary — all rights reserved |
+| [SECURITY.md](SECURITY.md) | How to report vulnerabilities |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Branch, commit, and PR conventions |
+| [`.env.example`](.env.example) | Local + Convex env template |
+| [`.github/pull_request_template.md`](.github/pull_request_template.md) | PR checklist + diagram slot |
+| [`doctor.config.json`](doctor.config.json) | React Doctor ignore / override rules |
 
 ---
 
@@ -257,7 +316,7 @@ flowchart LR
 - **Husky**: pre-commit lint via `prepare`
 - **Unit tests today:** pagination helpers, org-code normalization, movie query/auth rejection (`convex-test`), TMDB search Route Handler
 
-Forms stay **shadcn Field + local state** — that is intentional, not an oversight.
+Forms stay **shadcn `Field` + local state** — that is intentional, not an oversight.
 
 ---
 
@@ -270,21 +329,10 @@ Forms stay **shadcn Field + local state** — that is intentional, not an oversi
 
 ---
 
-## Contributing
-
-1. Branch from an up-to-date `main`.
-2. Keep commits **subject-only**, under 100 characters, no AI attribution trailers.
-3. Prefer focused commits when a change spans distinct concerns.
-4. Run `npm run check` (and `npm run build` for risky UI/routing work) before opening a PR.
-5. Use the PR template (Summary, Changes, Diagrams, Test plan, Notes).
-
-Pull requests that change Convex schema or auth should call out migrations and dashboard env vars explicitly.
-
----
-
 ## Design notes
 
-- Dark-first UI with a light theme toggle; fonts are expressive (Chakra Petch / IBM Plex family), not a default system stack.
+- Dark-first UI with a light theme toggle; brand mark in [`public/logo.svg`](public/logo.svg).
+- Fonts are expressive (Chakra Petch / IBM Plex family), not a default system stack.
 - Motion is purposeful (auth stage, roulette, pickers) and respects reduced-motion where wired.
 - Accessibility work is ongoing (labeled controls, keyboard-friendly cards, React Doctor a11y passes).
 
@@ -292,11 +340,20 @@ Pull requests that change Convex schema or auth should call out migrations and d
 
 ## License & credits
 
-Private project by **Mohammad Al-Sadah**. Movie metadata and imagery courtesy of [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed or certified by TMDB.
+**License:** [Proprietary — all rights reserved](LICENSE). © 2024–2026 Mohammad K. Alsadah.
+
+Movie metadata and imagery courtesy of [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is **not** endorsed or certified by TMDB.
+
+Open-source dependencies keep their own licenses (see `package.json` / each package).
+
+**Security disclosures:** see [SECURITY.md](SECURITY.md) — please email rather than filing a public issue.
+
+**Contact:** [mohmadksadah@gmail.com](mailto:mohmadksadah@gmail.com)
 
 ---
 
 <p align="center">
+  <img src="docs/assets/logo.svg" alt="" width="64" /><br />
   <strong>MOVINIGHT</strong><br />
   <em>Who picked this?</em>
 </p>
