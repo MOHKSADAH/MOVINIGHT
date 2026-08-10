@@ -5,7 +5,7 @@ import {
   getActiveOrgContext,
   requireActiveOrgContext,
 } from "./lib/customFunctions";
-import { findOrgByCode } from "./lib/orgs";
+import { belongsToOrg, findOrgByCode } from "./lib/orgs";
 import { DEFAULT_ORG_CODE } from "./lib/orgConstants";
 import { EASTERN_PROVINCE_RESTAURANTS } from "./lib/easternProvinceRestaurants";
 
@@ -70,7 +70,7 @@ export const deleteRestaurant = mutation({
     const { orgId } = await requireActiveOrgContext(ctx);
     const restaurant = await ctx.db.get(restaurantId);
     if (!restaurant) throw new Error("Not found");
-    if (restaurant.orgId && restaurant.orgId !== orgId) {
+    if (!belongsToOrg(restaurant.orgId, orgId)) {
       throw new Error("Restaurant belongs to another organization");
     }
     await ctx.db.delete(restaurantId);
@@ -84,7 +84,7 @@ export const toggleUpvote = mutation({
 
     const restaurant = await ctx.db.get(restaurantId);
     if (!restaurant) throw new Error("Not found");
-    if (restaurant.orgId && restaurant.orgId !== orgId) {
+    if (!belongsToOrg(restaurant.orgId, orgId)) {
       throw new Error("Restaurant belongs to another organization");
     }
 

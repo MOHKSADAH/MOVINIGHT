@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guardTmdbApi } from "@/lib/tmdb-api-guard";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
 /** Well-known, released films — not obscure high-rated or unreleased titles. */
 export async function GET(request: NextRequest) {
+  const blocked = await guardTmdbApi(request);
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const genreId = searchParams.get("genreId");
   const shuffle = searchParams.get("shuffle") === "1";

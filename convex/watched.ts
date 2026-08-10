@@ -5,6 +5,7 @@ import {
   getActiveOrgContext,
   requireActiveOrgContext,
 } from "./lib/customFunctions";
+import { belongsToOrg } from "./lib/orgs";
 
 export const getWatchedEntries = query({
   args: {},
@@ -39,7 +40,7 @@ export const addWatchedEntry = mutation({
 
     if (args.nightId) {
       const night = await ctx.db.get(args.nightId);
-      if (!night || (night.orgId && night.orgId !== orgId)) {
+      if (!night || !belongsToOrg(night.orgId, orgId)) {
         throw new Error("Night not found in this organization");
       }
     }
@@ -96,7 +97,7 @@ export const addRating = mutation({
 
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
-    if (entry.orgId && entry.orgId !== orgId) {
+    if (!belongsToOrg(entry.orgId, orgId)) {
       throw new Error("Entry belongs to another organization");
     }
 
@@ -153,7 +154,7 @@ export const deleteWatchedEntry = mutation({
     const { orgId } = await requireActiveOrgContext(ctx);
     const entry = await ctx.db.get(entryId);
     if (!entry) throw new Error("Entry not found");
-    if (entry.orgId && entry.orgId !== orgId) {
+    if (!belongsToOrg(entry.orgId, orgId)) {
       throw new Error("Entry belongs to another organization");
     }
     await ctx.db.delete(entryId);
@@ -166,11 +167,13 @@ export const getRecentWatched = query({
     const orgCtx = await getActiveOrgContext(ctx);
     if (!orgCtx) return [];
 
+    const take = Math.min(Math.max(1, Math.floor(limit)), 40);
+
     const entries = await ctx.db
       .query("watched_entries")
       .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
       .order("desc")
-      .take(limit);
+      .take(take);
 
     return Promise.all(
       entries.map(async (entry) => {

@@ -12,7 +12,12 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "./lib/orgConstants";
-import { getActiveOrgContext } from "./lib/customFunctions";
+import {
+  getActiveOrgContext,
+} from "./lib/customFunctions";
+import {
+  getEffectiveMembership,
+} from "./lib/orgs";
 import {
   AVATAR_ALLOWED_TYPES,
   AVATAR_MAX_BYTES,
@@ -53,11 +58,29 @@ export const isAccountActive = query({
 export const getUserById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const caller = await getActiveUser(ctx);
-    if (!caller) return null;
+    const orgCtx = await getActiveOrgContext(ctx);
+    if (!orgCtx) return null;
+
+    const membership = await getEffectiveMembership(
+      ctx,
+      userId,
+      orgCtx.orgId,
+    );
+    if (!membership) return null;
+
     const user = await ctx.db.get(userId);
     if (!user || user.deletedAt !== undefined) return null;
-    return { ...user, isOwner: isAppOwner(user.email) };
+
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      image: user.image,
+      bio: user.bio,
+      createdAt: user.createdAt,
+      isOwner: isAppOwner(user.email),
+    };
   },
 });
 
@@ -73,10 +96,21 @@ export const listUsers = query({
     const users = await Promise.all(
       memberships.map((membership) => ctx.db.get(membership.userId)),
     );
-    return users.filter(
-      (user): user is NonNullable<typeof user> =>
-        user != null && user.deletedAt === undefined,
-    );
+    return users
+      .filter(
+        (user): user is NonNullable<typeof user> =>
+          user != null && user.deletedAt === undefined,
+      )
+      .map((user) => ({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        image: user.image,
+        bio: user.bio,
+        createdAt: user.createdAt,
+        isOwner: isAppOwner(user.email),
+      }));
   },
 });
 
@@ -106,8 +140,19 @@ export const updateUser = mutation({
     const user = await requireActiveUser(ctx);
 
     const patch: Partial<{ name: string; bio: string }> = {};
-    if (args.name !== undefined) patch.name = args.name;
-    if (args.bio !== undefined) patch.bio = args.bio;
+    if (args.name !== undefined) {
+      const name = args.name.trim();
+      if (name.length < 1 || name.length > 80) {
+        throw new Error("Name must be 1–80 characters");
+      }
+      patch.name = name;
+    }
+    if (args.bio !== undefined) {
+      if (args.bio.length > 500) {
+        throw new Error("Bio must be 500 characters or fewer");
+      }
+      patch.bio = args.bio;
+    }
 
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(user._id, patch);

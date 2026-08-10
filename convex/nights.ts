@@ -7,6 +7,7 @@ import {
   getActiveOrgContext,
   requireActiveOrgContext,
 } from "./lib/customFunctions";
+import { belongsToOrg } from "./lib/orgs";
 
 async function requireNightInActiveOrg(
   ctx: MutationCtx,
@@ -15,7 +16,7 @@ async function requireNightInActiveOrg(
   const orgCtx = await requireActiveOrgContext(ctx);
   const night = await ctx.db.get(nightId);
   if (!night) throw new Error("Night not found");
-  if (night.orgId && night.orgId !== orgCtx.orgId) {
+  if (!belongsToOrg(night.orgId, orgCtx.orgId)) {
     throw new Error("Night belongs to another organization");
   }
   return { ...orgCtx, night };
@@ -55,8 +56,7 @@ export const getNight = query({
     if (!orgCtx) return null;
 
     const night = await ctx.db.get(nightId);
-    if (!night) return null;
-    if (night.orgId && night.orgId !== orgCtx.orgId) return null;
+    if (!night || !belongsToOrg(night.orgId, orgCtx.orgId)) return null;
 
     const [candidateMovies, pickedMovieData, host, attendeeUsers] =
       await Promise.all([

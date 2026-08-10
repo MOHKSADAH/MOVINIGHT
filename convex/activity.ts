@@ -28,6 +28,7 @@ export const getRecentActivity = query({
   handler: async (ctx, { limit = 12 }) => {
     const orgCtx = await getActiveOrgContext(ctx);
     if (!orgCtx) return [];
+    limit = Math.min(Math.max(1, Math.floor(limit)), 40);
 
     const [watchlist, watched, nights] = await Promise.all([
       ctx.db
