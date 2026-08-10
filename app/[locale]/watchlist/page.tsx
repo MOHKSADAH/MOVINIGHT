@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import {
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryState,
+} from "nuqs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/app-shell";
@@ -30,9 +36,13 @@ import { useLocale } from "next-intl";
 
 const PAGE_SIZE = 12;
 
-type SortOption = "votes" | "recent";
+const sortParser = parseAsStringEnum(["votes", "recent"] as const).withDefault(
+  "votes",
+);
 
-type WatchlistMovie = NonNullable<ReturnType<typeof useQuery<typeof api.watchlist.getWatchlist>>>[number]["movie"];
+type WatchlistMovie = NonNullable<
+  ReturnType<typeof useQuery<typeof api.watchlist.getWatchlist>>
+>[number]["movie"];
 
 export default function WatchlistPage() {
   const t = useTranslations("watchlist");
@@ -41,10 +51,28 @@ export default function WatchlistPage() {
   const locale = useLocale();
 
   const [searchOpen, setSearchOpen] = useState(false);
-  const [filter, setFilter] = useState("");
-  const [sort, setSort] = useState<SortOption>("votes");
-  const [page, setPage] = useState(0);
   const [detailMovie, setDetailMovie] = useState<WatchlistMovie | null>(null);
+
+  const [filter, setFilter] = useQueryState(
+    "q",
+    parseAsString.withDefault("").withOptions({
+      history: "replace",
+      shallow: true,
+      limitUrlUpdates: { method: "debounce", timeMs: 300 },
+    }),
+  );
+  const [sort, setSort] = useQueryState(
+    "sort",
+    sortParser.withOptions({ history: "replace", shallow: true }),
+  );
+  const [page, setPage] = useQueryState(
+    "page",
+    parseAsInteger.withDefault(1).withOptions({
+      history: "replace",
+      shallow: true,
+      clearOnDefault: true,
+    }),
+  );
 
   const user = useQuery(api.users.getCurrentUser);
   const watchlist = useQuery(api.watchlist.getWatchlist);
@@ -55,7 +83,9 @@ export default function WatchlistPage() {
 
   const handleUpvote = async (entryId: string) => {
     try {
-      await toggleUpvote({ entryId: entryId as Parameters<typeof toggleUpvote>[0]["entryId"] });
+      await toggleUpvote({
+        entryId: entryId as Parameters<typeof toggleUpvote>[0]["entryId"],
+      });
     } catch {
       toast.error(t("toastUpvoteFailed"));
     }
@@ -63,7 +93,9 @@ export default function WatchlistPage() {
 
   const handleDownvote = async (entryId: string) => {
     try {
-      await toggleDownvote({ entryId: entryId as Parameters<typeof toggleDownvote>[0]["entryId"] });
+      await toggleDownvote({
+        entryId: entryId as Parameters<typeof toggleDownvote>[0]["entryId"],
+      });
     } catch {
       toast.error(t("toastDownvoteFailed"));
     }
@@ -71,7 +103,11 @@ export default function WatchlistPage() {
 
   const handleRemove = async (entryId: string) => {
     try {
-      await removeFromWatchlist({ entryId: entryId as Parameters<typeof removeFromWatchlist>[0]["entryId"] });
+      await removeFromWatchlist({
+        entryId: entryId as Parameters<
+          typeof removeFromWatchlist
+        >[0]["entryId"],
+      });
       toast.success(t("toastRemoved"));
     } catch {
       toast.error(t("toastRemoveFailed"));
@@ -109,23 +145,34 @@ export default function WatchlistPage() {
       return b.addedAt - a.addedAt;
     });
 
-  const totalPages = Math.ceil((filteredList?.length ?? 0) / PAGE_SIZE);
-  const pagedList = filteredList?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.max(
+    1,
+    Math.ceil((filteredList?.length ?? 0) / PAGE_SIZE),
+  );
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const pageIndex = safePage - 1;
+  const pagedList = filteredList?.slice(
+    pageIndex * PAGE_SIZE,
+    pageIndex * PAGE_SIZE + PAGE_SIZE,
+  );
 
   const handleFilterChange = (val: string) => {
-    setFilter(val);
-    setPage(0);
+    void setFilter(val || null);
+    void setPage(1);
   };
 
-  const handleSortChange = (val: SortOption) => {
-    setSort(val);
-    setPage(0);
+  const handleSortChange = (val: "votes" | "recent") => {
+    void setSort(val);
+    void setPage(1);
+  };
+
+  const goToPage = (nextPage: number) => {
+    void setPage(Math.min(Math.max(nextPage, 1), totalPages));
   };
 
   return (
     <AppShell>
       <div className="p-6 max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
@@ -141,7 +188,6 @@ export default function WatchlistPage() {
           </Button>
         </div>
 
-        {/* Filters */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -172,11 +218,13 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Grid */}
         {watchlist === undefined ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="rounded-lg border border-border overflow-hidden">
+              <div
+                key={i}
+                className="rounded-lg border border-border overflow-hidden"
+              >
                 <Skeleton className="aspect-2/3 w-full" />
                 <div className="p-3 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
@@ -206,7 +254,12 @@ export default function WatchlistPage() {
                     onUpvote={() => handleUpvote(entry._id)}
                     onDownvote={() => handleDownvote(entry._id)}
                     onRemove={() => handleRemove(entry._id)}
-                    canRemove={user ? (user as { isOwner?: boolean }).isOwner || entry.addedBy?._id === user._id : false}
+                    canRemove={
+                      user
+                        ? (user as { isOwner?: boolean }).isOwner ||
+                          entry.addedBy?._id === user._id
+                        : false
+                    }
                     onClick={() => {
                       if (entry.movie) {
                         setDetailMovie(entry.movie);
@@ -217,22 +270,21 @@ export default function WatchlistPage() {
               })}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
+            {totalPages > 1 && (filteredList?.length ?? 0) > PAGE_SIZE && (
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      onClick={() => goToPage(safePage - 1)}
                       className={
-                        page === 0
+                        safePage <= 1
                           ? "pointer-events-none opacity-50"
                           : "cursor-pointer"
                       }
                     />
                   </PaginationItem>
 
-                  {getPageItems(page, totalPages).map((item) =>
+                  {getPageItems(pageIndex, totalPages).map((item) =>
                     item.kind === "ellipsis" ? (
                       <PaginationItem key={`ellipsis-${item.id}`}>
                         <PaginationEllipsis />
@@ -240,8 +292,8 @@ export default function WatchlistPage() {
                     ) : (
                       <PaginationItem key={item.page}>
                         <PaginationLink
-                          isActive={page === item.page}
-                          onClick={() => setPage(item.page)}
+                          isActive={pageIndex === item.page}
+                          onClick={() => goToPage(item.page + 1)}
                           className="cursor-pointer"
                         >
                           {item.page + 1}
@@ -252,11 +304,9 @@ export default function WatchlistPage() {
 
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages - 1, p + 1))
-                      }
+                      onClick={() => goToPage(safePage + 1)}
                       className={
-                        page >= totalPages - 1
+                        safePage >= totalPages
                           ? "pointer-events-none opacity-50"
                           : "cursor-pointer"
                       }

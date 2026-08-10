@@ -1,4 +1,4 @@
-# Lint + TypeScript checks for the Next.js app and Convex backend.
+# Lint, typecheck, unit tests, and production build.
 # React Doctor stays advisory in its own workflow; this gate must pass.
 
 name: CI
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lint-and-typecheck:
-    name: Lint & Typecheck
+    name: Lint, Typecheck, Test & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -38,3 +38,13 @@ jobs:
 
       - name: Typecheck Convex
         run: npm run typecheck:convex
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+        env:
+          # Build-time placeholders; real values are not required to compile routes.
+          NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
+          CONVEX_DEPLOYMENT: anonymous:example
