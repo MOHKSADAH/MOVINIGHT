@@ -47,15 +47,25 @@ export const listPending = query({
       .collect();
 
     const now = Date.now();
-    return invites
-      .filter((i) => i.status === "pending" && i.expiresAt > now)
-      .map((i) => ({
-        _id: i._id,
-        email: i.email,
-        status: i.status,
-        createdAt: i.createdAt,
-        expiresAt: i.expiresAt,
-      }));
+    const pending: {
+      _id: (typeof invites)[number]["_id"];
+      email: string;
+      status: string;
+      createdAt: number;
+      expiresAt: number;
+    }[] = [];
+    for (const i of invites) {
+      if (i.status === "pending" && i.expiresAt > now) {
+        pending.push({
+          _id: i._id,
+          email: i.email,
+          status: i.status,
+          createdAt: i.createdAt,
+          expiresAt: i.expiresAt,
+        });
+      }
+    }
+    return pending;
   },
 });
 

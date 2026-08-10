@@ -526,5 +526,3 @@ export function TMDBSearch({
     </>
   );
 }
-
-export { Badge };

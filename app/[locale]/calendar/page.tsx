@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useSyncExternalStore, createContext, useContext } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
@@ -26,6 +26,21 @@ import { DayPicker, type DayButtonProps } from "react-day-picker";
 import "react-day-picker/style.css";
 import { cn } from "@/lib/utils";
 import { buildNightsIcs, downloadIcs } from "@/lib/ics";
+
+function subscribeNoop() {
+  return () => {};
+}
+
+function getLocalDayStartMs(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function useLocalDayStart(): Date {
+  const ms = useSyncExternalStore(subscribeNoop, getLocalDayStartMs, getLocalDayStartMs);
+  return new Date(ms);
+}
 
 type CalendarNight = {
   _id: string;
@@ -152,12 +167,8 @@ function CreateNightDialog({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-  const [today, setToday] = useState<Date | null>(null);
+  const today = useLocalDayStart();
   const createNight = useMutation(api.nights.createNight);
-
-  useEffect(() => {
-    setToday(new Date());
-  }, []);
 
   const handleCreate = async () => {
     if (!title.trim() || !date) {
@@ -204,7 +215,7 @@ function CreateNightDialog({
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                disabled={today ? { before: today } : undefined}
+                disabled={{ before: today }}
               />
             </div>
           </div>

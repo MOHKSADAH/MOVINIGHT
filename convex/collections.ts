@@ -203,6 +203,7 @@ export const seedCuratedCollections = internalMutation({
     const idByName = new Map(
       existingOwned.map((c) => [c.name.toLowerCase(), c._id] as const),
     );
+    const existingById = new Map(existingOwned.map((c) => [c._id, c] as const));
 
     let collectionsCreated = 0;
     let collectionsSkipped = 0;
@@ -217,7 +218,7 @@ export const seedCuratedCollections = internalMutation({
       let collectionId = idByName.get(nameKey);
       if (collectionId) {
         collectionsSkipped += 1;
-        const existingCol = existingOwned.find((c) => c._id === collectionId);
+        const existingCol = existingById.get(collectionId);
         if (
           existingCol &&
           existingCol.description !== curated.description
@@ -323,12 +324,11 @@ export const seedCuratedCollections = internalMutation({
         .query("collection_movies")
         .withIndex("by_collection", (q) => q.eq("collectionId", collectionId))
         .collect();
-      for (const link of currentLinks) {
-        if (!desiredMovieIds.has(link.movieId)) {
-          await ctx.db.delete(link._id);
-          moviesUnlinked += 1;
-        }
-      }
+      const staleLinks = currentLinks.filter(
+        (link) => !desiredMovieIds.has(link.movieId),
+      );
+      await Promise.all(staleLinks.map((link) => ctx.db.delete(link._id)));
+      moviesUnlinked += staleLinks.length;
     }
 
     return {

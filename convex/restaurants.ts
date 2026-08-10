@@ -143,32 +143,32 @@ export const seedEasternProvinceRestaurants = internalMutation({
       existing.map((r) => `${r.name.toLowerCase()}::${r.city ?? ""}`),
     );
 
-    let inserted = 0;
-    let skipped = 0;
     const now = Date.now();
+    const toInsert = EASTERN_PROVINCE_RESTAURANTS.filter((spot) => {
+      const key = `${spot.name.toLowerCase()}::${spot.city ?? ""}`;
+      return !existingKeys.has(key);
+    });
 
-    for (const spot of EASTERN_PROVINCE_RESTAURANTS) {
-      const key = `${spot.name.toLowerCase()}::${spot.city}`;
-      if (existingKeys.has(key)) {
-        skipped += 1;
-        continue;
-      }
-      await ctx.db.insert("restaurants", {
-        orgId: weebs._id,
-        name: spot.name,
-        category: spot.category,
-        city: spot.city,
-        address: spot.address,
-        notes: spot.notes,
-        priceRange: spot.priceRange,
-        imageUrl: spot.imageUrl,
-        addedBy: owner._id,
-        addedAt: now,
-        upvotes: [],
-      });
-      existingKeys.add(key);
-      inserted += 1;
-    }
+    await Promise.all(
+      toInsert.map((spot) =>
+        ctx.db.insert("restaurants", {
+          orgId: weebs._id,
+          name: spot.name,
+          category: spot.category,
+          city: spot.city,
+          address: spot.address,
+          notes: spot.notes,
+          priceRange: spot.priceRange,
+          imageUrl: spot.imageUrl,
+          addedBy: owner._id,
+          addedAt: now,
+          upvotes: [],
+        }),
+      ),
+    );
+
+    const inserted = toInsert.length;
+    const skipped = EASTERN_PROVINCE_RESTAURANTS.length - toInsert.length;
 
     return {
       inserted,

@@ -78,6 +78,7 @@ export default function InviteAcceptPage() {
       toast.error(
         err instanceof Error ? err.message : t("inviteAcceptFailed"),
       );
+    } finally {
       setSaving(false);
     }
   };

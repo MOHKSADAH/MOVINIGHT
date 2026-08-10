@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -29,6 +29,56 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/empty-state";
 import { useTranslations } from "next-intl";
 
+type RestaurantCity = "dammam" | "saihat" | "qatif";
+
+type AddFormState = {
+  name: string;
+  category: string;
+  address: string;
+  notes: string;
+  priceRange: string;
+  city: "" | RestaurantCity;
+  imageUrl: string;
+  nameError?: string;
+  categoryError?: string;
+};
+
+const INITIAL_ADD_FORM: AddFormState = {
+  name: "",
+  category: "",
+  address: "",
+  notes: "",
+  priceRange: "",
+  city: "",
+  imageUrl: "",
+};
+
+type AddFormAction =
+  | { type: "patch"; patch: Partial<AddFormState> }
+  | { type: "reset" }
+  | {
+      type: "validate";
+      nameError?: string;
+      categoryError?: string;
+    };
+
+function addFormReducer(state: AddFormState, action: AddFormAction): AddFormState {
+  switch (action.type) {
+    case "patch":
+      return { ...state, ...action.patch };
+    case "reset":
+      return INITIAL_ADD_FORM;
+    case "validate":
+      return {
+        ...state,
+        nameError: action.nameError,
+        categoryError: action.categoryError,
+      };
+    default:
+      return state;
+  }
+}
+
 const CATEGORY_SLUGS = [
   "All",
   "Saudi",
@@ -48,6 +98,10 @@ const CATEGORY_SLUGS = [
   "Steakhouse",
   "Other",
 ] as const;
+
+const CATEGORY_FORM_SLUGS = CATEGORY_SLUGS.filter(
+  (c): c is Exclude<(typeof CATEGORY_SLUGS)[number], "All"> => c !== "All",
+);
 
 const CITY_SLUGS = ["All", "dammam", "saihat", "qatif"] as const;
 
@@ -91,8 +145,6 @@ function cityLabel(
 
 const PRICE_RANGES = ["$", "$$", "$$$"];
 
-type RestaurantCity = "dammam" | "saihat" | "qatif";
-
 type Restaurant = {
   _id: Id<"restaurants">;
   name: string;
@@ -120,17 +172,8 @@ export default function FoodPage() {
   );
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeCity, setActiveCity] = useState("All");
-
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [address, setAddress] = useState("");
-  const [notes, setNotes] = useState("");
-  const [priceRange, setPriceRange] = useState("");
-  const [city, setCity] = useState<"" | RestaurantCity>("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [form, dispatchForm] = useReducer(addFormReducer, INITIAL_ADD_FORM);
   const [saving, setSaving] = useState(false);
-  const [nameError, setNameError] = useState<string>();
-  const [categoryError, setCategoryError] = useState<string>();
 
   const restaurants = useQuery(api.restaurants.getRestaurants);
   const addRestaurant = useMutation(api.restaurants.addRestaurant);
@@ -148,39 +191,30 @@ export default function FoodPage() {
           return categoryOk && cityOk;
         });
 
-  const resetForm = () => {
-    setName("");
-    setCategory("");
-    setAddress("");
-    setNotes("");
-    setPriceRange("");
-    setCity("");
-    setImageUrl("");
-    setNameError(undefined);
-    setCategoryError(undefined);
-  };
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const nextNameError = !name.trim() ? t("nameRequired") : undefined;
-    const nextCategoryError = !category ? t("categoryRequired") : undefined;
-    setNameError(nextNameError);
-    setCategoryError(nextCategoryError);
+    const nextNameError = !form.name.trim() ? t("nameRequired") : undefined;
+    const nextCategoryError = !form.category ? t("categoryRequired") : undefined;
+    dispatchForm({
+      type: "validate",
+      nameError: nextNameError,
+      categoryError: nextCategoryError,
+    });
     if (nextNameError || nextCategoryError) return;
 
     setSaving(true);
     try {
       await addRestaurant({
-        name: name.trim(),
-        category,
-        address: address.trim() || undefined,
-        notes: notes.trim() || undefined,
-        priceRange: priceRange || undefined,
-        city: city || undefined,
-        imageUrl: imageUrl.trim() || undefined,
+        name: form.name.trim(),
+        category: form.category,
+        address: form.address.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+        priceRange: form.priceRange || undefined,
+        city: form.city || undefined,
+        imageUrl: form.imageUrl.trim() || undefined,
       });
       toast.success(t("toastAdded"));
-      resetForm();
+      dispatchForm({ type: "reset" });
       setAddOpen(false);
     } catch {
       toast.error(t("toastAddFailed"));
@@ -390,7 +424,7 @@ export default function FoodPage() {
         open={addOpen}
         onOpenChange={(open) => {
           setAddOpen(open);
-          if (!open) resetForm();
+          if (!open) dispatchForm({ type: "reset" });
         }}
       >
         <DialogContent className="max-w-sm">
@@ -403,51 +437,70 @@ export default function FoodPage() {
             className="space-y-3"
           >
             <FieldGroup className="gap-3">
-              <Field data-invalid={nameError ? true : undefined}>
+              <Field data-invalid={form.nameError ? true : undefined}>
                 <FieldLabel htmlFor="restaurant-name">{tCommon("name")}</FieldLabel>
                 <Input
                   id="restaurant-name"
                   placeholder={t("restaurantNamePlaceholder")}
-                  value={name}
+                  value={form.name}
                   onChange={(e) => {
-                    setName(e.target.value);
-                    if (nameError) setNameError(undefined);
+                    dispatchForm({
+                      type: "patch",
+                      patch: {
+                        name: e.target.value,
+                        ...(form.nameError ? { nameError: undefined } : {}),
+                      },
+                    });
                   }}
                   autoFocus
-                  aria-invalid={nameError ? true : undefined}
+                  aria-invalid={form.nameError ? true : undefined}
                 />
-                <FieldError>{nameError}</FieldError>
+                <FieldError>{form.nameError}</FieldError>
               </Field>
-              <Field data-invalid={categoryError ? true : undefined}>
+              <Field data-invalid={form.categoryError ? true : undefined}>
                 <FieldLabel htmlFor="restaurant-category">
                   {t("categoryLabel")}
                 </FieldLabel>
                 <select
                   id="restaurant-category"
-                  value={category}
+                  value={form.category}
+                  aria-label={t("categoryLabel")}
                   onChange={(e) => {
-                    setCategory(e.target.value);
-                    if (categoryError) setCategoryError(undefined);
+                    dispatchForm({
+                      type: "patch",
+                      patch: {
+                        category: e.target.value,
+                        ...(form.categoryError
+                          ? { categoryError: undefined }
+                          : {}),
+                      },
+                    });
                   }}
-                  aria-invalid={categoryError ? true : undefined}
+                  aria-invalid={form.categoryError ? true : undefined}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <option value="">{t("selectCategory")}</option>
-                  {CATEGORY_SLUGS.filter((c) => c !== "All").map((cat) => (
+                  {CATEGORY_FORM_SLUGS.map((cat) => (
                     <option key={cat} value={cat}>
                       {categoryLabel(cat, t)}
                     </option>
                   ))}
                 </select>
-                <FieldError>{categoryError}</FieldError>
+                <FieldError>{form.categoryError}</FieldError>
               </Field>
               <Field>
                 <FieldLabel htmlFor="restaurant-city">{t("cityLabel")}</FieldLabel>
                 <select
                   id="restaurant-city"
-                  value={city}
+                  value={form.city}
+                  aria-label={t("cityLabel")}
                   onChange={(e) =>
-                    setCity(e.target.value as "" | RestaurantCity)
+                    dispatchForm({
+                      type: "patch",
+                      patch: {
+                        city: e.target.value as "" | RestaurantCity,
+                      },
+                    })
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
@@ -467,8 +520,14 @@ export default function FoodPage() {
                   </FieldLabel>
                   <select
                     id="restaurant-price"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
+                    value={form.priceRange}
+                    aria-label={t("priceRangeLabel")}
+                    onChange={(e) =>
+                      dispatchForm({
+                        type: "patch",
+                        patch: { priceRange: e.target.value },
+                      })
+                    }
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <option value="">{tCommon("optionalPlain")}</option>
@@ -489,8 +548,13 @@ export default function FoodPage() {
                   <Input
                     id="restaurant-address"
                     placeholder={tCommon("optionalPlain")}
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={form.address}
+                    onChange={(e) =>
+                      dispatchForm({
+                        type: "patch",
+                        patch: { address: e.target.value },
+                      })
+                    }
                   />
                 </Field>
               </div>
@@ -504,8 +568,13 @@ export default function FoodPage() {
                 <Input
                   id="restaurant-image"
                   placeholder={t("imageUrlPlaceholder")}
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
+                  value={form.imageUrl}
+                  onChange={(e) =>
+                    dispatchForm({
+                      type: "patch",
+                      patch: { imageUrl: e.target.value },
+                    })
+                  }
                 />
               </Field>
               <Field>
@@ -518,8 +587,13 @@ export default function FoodPage() {
                 <Input
                   id="restaurant-notes"
                   placeholder={t("notesPlaceholder")}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  value={form.notes}
+                  onChange={(e) =>
+                    dispatchForm({
+                      type: "patch",
+                      patch: { notes: e.target.value },
+                    })
+                  }
                 />
               </Field>
             </FieldGroup>

@@ -23,16 +23,20 @@ export const getWatchlist = query({
       .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
       .collect();
 
+    const unwatched: typeof entries = [];
+    for (const entry of entries) {
+      if (!watchedMovieIds.has(entry.movieId)) {
+        unwatched.push(entry);
+      }
+    }
     const enriched = await Promise.all(
-      entries
-        .filter((entry) => !watchedMovieIds.has(entry.movieId))
-        .map(async (entry) => {
-          const [movie, addedBy] = await Promise.all([
-            ctx.db.get(entry.movieId),
-            ctx.db.get(entry.addedBy),
-          ]);
-          return { ...entry, movie, addedBy };
-        }),
+      unwatched.map(async (entry) => {
+        const [movie, addedBy] = await Promise.all([
+          ctx.db.get(entry.movieId),
+          ctx.db.get(entry.addedBy),
+        ]);
+        return { ...entry, movie, addedBy };
+      }),
     );
     return enriched
       .filter((e) => e.movie !== null)

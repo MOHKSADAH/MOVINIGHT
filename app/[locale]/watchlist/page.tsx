@@ -45,7 +45,6 @@ export default function WatchlistPage() {
   const [sort, setSort] = useState<SortOption>("votes");
   const [page, setPage] = useState(0);
   const [detailMovie, setDetailMovie] = useState<WatchlistMovie | null>(null);
-  const [detailEntryMovieId, setDetailEntryMovieId] = useState<Id<"movies"> | null>(null);
 
   const user = useQuery(api.users.getCurrentUser);
   const watchlist = useQuery(api.watchlist.getWatchlist);
@@ -80,15 +79,14 @@ export default function WatchlistPage() {
   };
 
   const handleMarkWatched = async () => {
-    if (!detailEntryMovieId) return;
+    if (!detailMovie) return;
     try {
       await addWatchedEntry({
-        movieId: detailEntryMovieId,
+        movieId: detailMovie._id as Id<"movies">,
         watchedAt: Date.now(),
       });
       toast.success(t("toastMarkedWatched"));
       setDetailMovie(null);
-      setDetailEntryMovieId(null);
     } catch {
       toast.error(t("toastMarkWatchedFailed"));
     }
@@ -191,17 +189,18 @@ export default function WatchlistPage() {
         ) : pagedList && pagedList.length > 0 ? (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {pagedList.map((entry) =>
-                entry.movie ? (
+              {pagedList.map((entry) => {
+                if (!entry.movie) return null;
+                const upvoteIds = new Set(entry.upvotes);
+                const downvoteIds = new Set(entry.downvotes ?? []);
+                return (
                   <WatchlistCard
                     key={entry._id}
                     movie={entry.movie}
                     upvotes={entry.upvotes.length}
-                    hasUpvoted={user ? entry.upvotes.includes(user._id) : false}
+                    hasUpvoted={user ? upvoteIds.has(user._id) : false}
                     downvotes={(entry.downvotes ?? []).length}
-                    hasDownvoted={
-                      user ? (entry.downvotes ?? []).includes(user._id) : false
-                    }
+                    hasDownvoted={user ? downvoteIds.has(user._id) : false}
                     addedBy={entry.addedBy?.name ?? undefined}
                     note={entry.note ?? undefined}
                     onUpvote={() => handleUpvote(entry._id)}
@@ -211,12 +210,11 @@ export default function WatchlistPage() {
                     onClick={() => {
                       if (entry.movie) {
                         setDetailMovie(entry.movie);
-                        setDetailEntryMovieId(entry.movie._id as Id<"movies">);
                       }
                     }}
                   />
-                ) : null,
-              )}
+                );
+              })}
             </div>
 
             {/* Pagination */}
@@ -296,7 +294,6 @@ export default function WatchlistPage() {
         open={!!detailMovie}
         onClose={() => {
           setDetailMovie(null);
-          setDetailEntryMovieId(null);
         }}
         onMarkWatched={handleMarkWatched}
       />

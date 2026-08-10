@@ -58,10 +58,7 @@ export function WatchlistCard({
 
   return (
     <div className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors">
-      <div
-        className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer"
-        onClick={onClick}
-      >
+      <div className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer">
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
@@ -75,8 +72,16 @@ export function WatchlistCard({
             {title}
           </div>
         )}
+        {onClick && (
+          <button
+            type="button"
+            className="absolute inset-0 z-[1] cursor-pointer border-0 bg-transparent p-0"
+            onClick={onClick}
+            aria-label={title}
+          />
+        )}
         {movie.imdbRating && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
             <span className="text-[10px] font-bold text-yellow-400">{tCommon("imdb")}</span>
             <span className="text-xs font-semibold text-white">
               {movie.imdbRating.toFixed(1)}
@@ -86,8 +91,12 @@ export function WatchlistCard({
         {canRemove && onRemove && (
           <button
             type="button"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
-            onClick={onRemove}
+            className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
+            aria-label={tCommon("remove")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
           >
             <Trash2 className="h-3.5 w-3.5 text-white" />
           </button>
@@ -181,10 +190,7 @@ export function WatchedGridCard({
 
   return (
     <div className="group rounded-lg border border-border bg-card overflow-hidden flex flex-col hover:border-border/80 transition-colors">
-      <div
-        className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer"
-        onClick={onClick}
-      >
+      <div className="relative aspect-2/3 bg-muted shrink-0 cursor-pointer">
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
           <Image
             src={movie.poster}
@@ -198,8 +204,14 @@ export function WatchedGridCard({
             {title}
           </div>
         )}
+        <button
+          type="button"
+          className="absolute inset-0 z-[1] cursor-pointer border-0 bg-transparent p-0"
+          onClick={onClick}
+          aria-label={title}
+        />
         {movie.imdbRating && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-black/70 rounded px-1.5 py-0.5">
             <span className="text-[10px] font-bold text-yellow-400">{tCommon("imdb")}</span>
             <span className="text-xs font-semibold text-white">
               {movie.imdbRating.toFixed(1)}
@@ -207,7 +219,7 @@ export function WatchedGridCard({
           </div>
         )}
         {myRating && !onDelete && (
-          <div className="absolute top-2 right-2 bg-black/70 rounded px-1.5 py-0.5">
+          <div className="absolute top-2 right-2 z-10 bg-black/70 rounded px-1.5 py-0.5">
             <span className="text-[10px] font-semibold text-white">
               {tCommon("youRating", { score: myRating.score })}
             </span>
@@ -216,7 +228,8 @@ export function WatchedGridCard({
         {onDelete && (
           <button
             type="button"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
+            className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-destructive/80 rounded p-1"
+            aria-label={tCommon("delete")}
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
@@ -228,10 +241,7 @@ export function WatchedGridCard({
       </div>
 
       <div className="p-3 flex flex-col gap-1 flex-1">
-        <h3
-          className="font-medium text-sm leading-tight line-clamp-2 cursor-pointer"
-          onClick={onClick}
-        >
+        <h3 className="font-medium text-sm leading-tight line-clamp-2">
           {title}
         </h3>
         <p className="text-xs text-muted-foreground">{date}</p>
@@ -262,87 +272,6 @@ export function WatchedGridCard({
   );
 }
 
-interface WatchedCardProps {
-  movie: Movie;
-  watchedAt: number;
-  avgRating?: number;
-  myRating?: number;
-  ratingCount: number;
-  onClick?: () => void;
-}
-
-export function WatchedCard({
-  movie,
-  watchedAt,
-  avgRating,
-  myRating,
-  ratingCount,
-  onClick,
-}: WatchedCardProps) {
-  const locale = useLocale();
-  const tCommon = useTranslations("common");
-  const title = getLocalizedMovieTitle(movie, locale);
-  const date = format(new Date(watchedAt), "MMM d, yyyy", {
-    locale: getDateFnsLocale(locale),
-  });
-
-  return (
-    <div
-      className={cn(
-        "group flex gap-3 rounded-lg border border-border bg-card p-3 transition-colors",
-        onClick && "cursor-pointer hover:bg-accent/30",
-      )}
-      onClick={onClick}
-    >
-      <div className="relative shrink-0 w-16 h-24 rounded overflow-hidden bg-muted">
-        {movie.poster && movie.poster !== "/placeholder.jpg" ? (
-          <Image
-            src={movie.poster}
-            alt={title}
-            fill
-            className="object-cover"
-            sizes="64px"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-            {tCommon("noImage")}
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-sm leading-tight truncate" dir="auto">
-          {title}
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{movie.releaseYear}</p>
-        <p className="text-xs text-muted-foreground mt-1">{date}</p>
-
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          {movie.imdbRating && (
-            <div className="flex items-center gap-1 bg-yellow-500/10 rounded px-1.5 py-0.5">
-              <span className="text-[10px] font-bold text-yellow-600">{tCommon("imdb")}</span>
-              <span className="text-xs font-semibold">{movie.imdbRating.toFixed(1)}</span>
-            </div>
-          )}
-          {avgRating !== undefined && (
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-medium">{avgRating.toFixed(1)}</span>
-              <span className="text-[10px] text-muted-foreground">
-                {tCommon("groupRatingCount", { count: ratingCount })}
-              </span>
-            </div>
-          )}
-          {myRating !== undefined && (
-            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-              {tCommon("youRating", { score: myRating })}
-            </Badge>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface MoviePosterCardProps {
   movie: Movie;
   onClick?: () => void;
@@ -354,12 +283,15 @@ export function MoviePosterCard({ movie, onClick, selected }: MoviePosterCardPro
   const title = getLocalizedMovieTitle(movie, locale);
 
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "relative rounded-lg overflow-hidden cursor-pointer border-2 transition-all",
+        "relative rounded-lg overflow-hidden border-2 transition-all block w-full p-0 text-left",
         selected ? "border-primary shadow-lg" : "border-transparent hover:border-border",
       )}
       onClick={onClick}
+      aria-label={title}
+      aria-pressed={selected}
     >
       <div className="relative aspect-2/3 bg-muted">
         {movie.poster && movie.poster !== "/placeholder.jpg" ? (
@@ -382,6 +314,6 @@ export function MoviePosterCard({ movie, onClick, selected }: MoviePosterCardPro
         </p>
         <p className="text-[10px] text-muted-foreground">{movie.releaseYear}</p>
       </div>
-    </div>
+    </button>
   );
 }

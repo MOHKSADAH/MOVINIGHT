@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# React Doctor local scan dumps (JSON/markdown from agent triage)
+.react-doctor-run/
+
 # next.js
 /.next/
 /out/
