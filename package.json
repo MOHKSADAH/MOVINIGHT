@@ -14,8 +14,8 @@
     "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
-    "@auth/core": "^0.37.4",
-    "@convex-dev/auth": "^0.0.90",
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.94",
     "@convex-dev/migrations": "^0.3.6",
     "@swc/helpers": "0.5.23",
     "class-variance-authority": "^0.7.1",
