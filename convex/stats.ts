@@ -81,14 +81,19 @@ export const getHallOfFame = query({
       }
     }
 
-    const criticRows = [...ratingsByUser.entries()]
-      .map(([id, scores]) => ({
-        user: userRef(userMap.get(id) ?? null),
-        avgScore: avg(scores)!,
-        count: scores.length,
-      }))
-      .filter((r) => r.user && r.count >= 1)
-      .sort((a, b) => a.avgScore - b.avgScore);
+    const criticRows: {
+      user: UserRef;
+      avgScore: number;
+      count: number;
+    }[] = [];
+    for (const [id, scores] of ratingsByUser.entries()) {
+      const user = userRef(userMap.get(id) ?? null);
+      const count = scores.length;
+      if (user && count >= 1) {
+        criticRows.push({ user, avgScore: avg(scores)!, count });
+      }
+    }
+    criticRows.sort((a, b) => a.avgScore - b.avgScore);
 
     const harshest = criticRows[0] ?? null;
     const softie =
@@ -98,14 +103,14 @@ export const getHallOfFame = query({
     for (const night of nights) {
       hostCounts.set(night.hostId, (hostCounts.get(night.hostId) ?? 0) + 1);
     }
-    const topHostRow =
-      [...hostCounts.entries()]
-        .map(([id, count]) => ({
-          user: userRef(userMap.get(id) ?? null),
-          count,
-        }))
-        .filter((r) => r.user)
-        .sort((a, b) => b.count - a.count)[0] ?? null;
+    let topHostRow: { user: UserRef; count: number } | null = null;
+    for (const [id, count] of hostCounts.entries()) {
+      const user = userRef(userMap.get(id) ?? null);
+      if (!user) continue;
+      if (!topHostRow || count > topHostRow.count) {
+        topHostRow = { user, count };
+      }
+    }
 
     const upvoteCounts = new Map<Id<"users">, number>();
     for (const entry of watchlist) {
@@ -113,14 +118,14 @@ export const getHallOfFame = query({
         upvoteCounts.set(uid, (upvoteCounts.get(uid) ?? 0) + 1);
       }
     }
-    const topUpvoterRow =
-      [...upvoteCounts.entries()]
-        .map(([id, count]) => ({
-          user: userRef(userMap.get(id) ?? null),
-          count,
-        }))
-        .filter((r) => r.user)
-        .sort((a, b) => b.count - a.count)[0] ?? null;
+    let topUpvoterRow: { user: UserRef; count: number } | null = null;
+    for (const [id, count] of upvoteCounts.entries()) {
+      const user = userRef(userMap.get(id) ?? null);
+      if (!user) continue;
+      if (!topUpvoterRow || count > topUpvoterRow.count) {
+        topUpvoterRow = { user, count };
+      }
+    }
 
     const suggestScores = new Map<Id<"users">, number[]>();
     for (const entry of watched) {
@@ -133,14 +138,19 @@ export const getHallOfFame = query({
         suggestScores.set(sid, list);
       }
     }
-    const suggestRows = [...suggestScores.entries()]
-      .map(([id, scores]) => ({
-        user: userRef(userMap.get(id) ?? null),
-        avgGroupScore: avg(scores)!,
-        count: scores.length,
-      }))
-      .filter((r) => r.user && r.count >= 1)
-      .sort((a, b) => a.avgGroupScore - b.avgGroupScore);
+    const suggestRows: {
+      user: UserRef;
+      avgGroupScore: number;
+      count: number;
+    }[] = [];
+    for (const [id, scores] of suggestScores.entries()) {
+      const user = userRef(userMap.get(id) ?? null);
+      const count = scores.length;
+      if (user && count >= 1) {
+        suggestRows.push({ user, avgGroupScore: avg(scores)!, count });
+      }
+    }
+    suggestRows.sort((a, b) => a.avgGroupScore - b.avgGroupScore);
 
     const worstSuggester = suggestRows[0] ?? null;
     const oracle =
@@ -389,14 +399,18 @@ export const getRoasts = query({
       }
     }
 
-    const sortedCritics = [...ratingsByUser.entries()]
-      .map(([id, scores]) => ({
-        name: userMap.get(id)?.name ?? "Someone",
-        avg: avg(scores)!,
-        count: scores.length,
-      }))
-      .filter((r) => r.count >= 1)
-      .sort((a, b) => a.avg - b.avg);
+    const sortedCritics: { name: string; avg: number; count: number }[] = [];
+    for (const [id, scores] of ratingsByUser.entries()) {
+      const count = scores.length;
+      if (count >= 1) {
+        sortedCritics.push({
+          name: userMap.get(id)?.name ?? "Someone",
+          avg: avg(scores)!,
+          count,
+        });
+      }
+    }
+    sortedCritics.sort((a, b) => a.avg - b.avg);
 
     if (sortedCritics[0] && sortedCritics[0].avg < 6) {
       roasts.push(

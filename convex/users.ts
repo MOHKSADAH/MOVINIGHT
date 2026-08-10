@@ -70,13 +70,13 @@ export const listUsers = query({
       .query("organizationMembers")
       .withIndex("by_org", (q) => q.eq("orgId", orgCtx.orgId))
       .collect();
-    const users = [];
-    for (const membership of memberships) {
-      const user = await ctx.db.get(membership.userId);
-      if (!user || user.deletedAt !== undefined) continue;
-      users.push(user);
-    }
-    return users;
+    const users = await Promise.all(
+      memberships.map((membership) => ctx.db.get(membership.userId)),
+    );
+    return users.filter(
+      (user): user is NonNullable<typeof user> =>
+        user != null && user.deletedAt === undefined,
+    );
   },
 });
 

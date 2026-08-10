@@ -95,9 +95,7 @@ async function removeOrgMemberships(
     .query("organizationMembers")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
-  for (const membership of memberships) {
-    await ctx.db.delete(membership._id);
-  }
+  await Promise.all(memberships.map((m) => ctx.db.delete(m._id)));
 }
 
 /**
@@ -114,42 +112,48 @@ async function revokeAuthCredentials(
     .withIndex("userId", (q) => q.eq("userId", userId))
     .collect();
 
-  for (const session of sessions) {
-    const refreshTokens = await ctx.db
-      .query("authRefreshTokens")
-      .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
-      .collect();
-    for (const token of refreshTokens) {
-      await ctx.db.delete(token._id);
-    }
-    await ctx.db.delete(session._id);
-  }
+  const refreshTokensBySession = await Promise.all(
+    sessions.map((session) =>
+      ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect(),
+    ),
+  );
+  await Promise.all(
+    refreshTokensBySession.flat().map((token) => ctx.db.delete(token._id)),
+  );
+  await Promise.all(sessions.map((session) => ctx.db.delete(session._id)));
 
   const accounts = await ctx.db
     .query("authAccounts")
     .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
     .collect();
 
-  for (const account of accounts) {
-    const codes = await ctx.db
-      .query("authVerificationCodes")
-      .withIndex("accountId", (q) => q.eq("accountId", account._id))
-      .collect();
-    for (const code of codes) {
-      await ctx.db.delete(code._id);
-    }
-    await ctx.db.delete(account._id);
-  }
+  const codesByAccount = await Promise.all(
+    accounts.map((account) =>
+      ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
+        .collect(),
+    ),
+  );
+  await Promise.all(
+    codesByAccount.flat().map((code) => ctx.db.delete(code._id)),
+  );
+  await Promise.all(accounts.map((account) => ctx.db.delete(account._id)));
 
   if (sessions.length > 0) {
     // authVerifiers holds transient OAuth PKCE state and has no index on sessionId.
     const sessionIds = new Set(sessions.map((s) => s._id));
     const verifiers = await ctx.db.query("authVerifiers").collect();
+    const verifierIdsToDelete: Id<"authVerifiers">[] = [];
     for (const verifier of verifiers) {
       if (verifier.sessionId && sessionIds.has(verifier.sessionId)) {
-        await ctx.db.delete(verifier._id);
+        verifierIdsToDelete.push(verifier._id);
       }
     }
+    await Promise.all(verifierIdsToDelete.map((id) => ctx.db.delete(id)));
   }
 }
 
@@ -159,40 +163,45 @@ async function removeLiveParticipation(
   userId: Id<"users">,
 ): Promise<void> {
   const watchlistEntries = await ctx.db.query("watchlist_entries").collect();
-  for (const entry of watchlistEntries) {
+  const watchlistPatches = watchlistEntries.flatMap((entry) => {
     const upvotes = entry.upvotes.filter((id) => id !== userId);
     const downvotes = entry.downvotes?.filter((id) => id !== userId);
     const upvotesChanged = upvotes.length !== entry.upvotes.length;
     const downvotesChanged =
       downvotes !== undefined && downvotes.length !== entry.downvotes!.length;
-
-    if (upvotesChanged || downvotesChanged) {
-      await ctx.db.patch(entry._id, {
+    if (!upvotesChanged && !downvotesChanged) return [];
+    return [
+      ctx.db.patch(entry._id, {
         ...(upvotesChanged ? { upvotes } : {}),
         ...(downvotesChanged ? { downvotes } : {}),
-      });
-    }
-  }
+      }),
+    ];
+  });
+  await Promise.all(watchlistPatches);
 
   const restaurants = await ctx.db.query("restaurants").collect();
-  for (const restaurant of restaurants) {
+  const restaurantPatches = restaurants.flatMap((restaurant) => {
     const upvotes = restaurant.upvotes.filter((id) => id !== userId);
-    if (upvotes.length !== restaurant.upvotes.length) {
-      await ctx.db.patch(restaurant._id, { upvotes });
-    }
-  }
+    if (upvotes.length === restaurant.upvotes.length) return [];
+    return [ctx.db.patch(restaurant._id, { upvotes })];
+  });
+  await Promise.all(restaurantPatches);
 
   // Attendance on a night that hasn't finished is live state; done nights are history.
-  for (const status of ["upcoming", "active"] as const) {
-    const nights = await ctx.db
+  const [upcomingNights, activeNights] = await Promise.all([
+    ctx.db
       .query("movie_nights")
-      .withIndex("by_status", (q) => q.eq("status", status))
-      .collect();
-    for (const night of nights) {
-      const attendees = night.attendees.filter((id) => id !== userId);
-      if (attendees.length !== night.attendees.length) {
-        await ctx.db.patch(night._id, { attendees });
-      }
-    }
-  }
+      .withIndex("by_status", (q) => q.eq("status", "upcoming"))
+      .collect(),
+    ctx.db
+      .query("movie_nights")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect(),
+  ]);
+  const nightPatches = [...upcomingNights, ...activeNights].flatMap((night) => {
+    const attendees = night.attendees.filter((id) => id !== userId);
+    if (attendees.length === night.attendees.length) return [];
+    return [ctx.db.patch(night._id, { attendees })];
+  });
+  await Promise.all(nightPatches);
 }

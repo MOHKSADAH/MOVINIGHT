@@ -38,9 +38,13 @@ export const listMine = query({
   handler: async (ctx) => {
     const user = await requireActiveUser(ctx);
     const memberships = await listEffectiveMembershipsForUser(ctx, user._id);
+    const orgs = await Promise.all(
+      memberships.map((membership) => ctx.db.get(membership.orgId)),
+    );
     const results = [];
-    for (const membership of memberships) {
-      const org = await ctx.db.get(membership.orgId);
+    for (let i = 0; i < memberships.length; i++) {
+      const membership = memberships[i]!;
+      const org = orgs[i];
       if (!org) continue;
       results.push({
         _id: org._id,
@@ -267,10 +271,16 @@ export const listMembers = query({
       .withIndex("by_org", (q) => q.eq("orgId", args.orgId))
       .collect();
 
+    const effectiveMemberships = memberships.filter(isEffectiveMembership);
+    const members = await Promise.all(
+      effectiveMemberships.map((membership) =>
+        ctx.db.get(membership.userId),
+      ),
+    );
     const rows = [];
-    for (const membership of memberships) {
-      if (!isEffectiveMembership(membership)) continue;
-      const member = await ctx.db.get(membership.userId);
+    for (let i = 0; i < effectiveMemberships.length; i++) {
+      const membership = effectiveMemberships[i]!;
+      const member = members[i];
       if (!member || member.deletedAt !== undefined) continue;
       rows.push({
         membershipId: membership._id,

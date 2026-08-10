@@ -63,12 +63,35 @@ export const getRecentActivity = query({
 
     const items: Activity[] = [];
 
+    const watchlistMovieIds = [
+      ...new Set(watchlist.map((entry) => entry.movieId)),
+    ];
+    const watchlistUserIds = [
+      ...new Set(watchlist.map((entry) => entry.addedBy)),
+    ];
+    const [watchlistMovies, watchlistUsers] = await Promise.all([
+      Promise.all(watchlistMovieIds.map((id) => ctx.db.get(id))),
+      Promise.all(watchlistUserIds.map((id) => ctx.db.get(id))),
+    ]);
+    const movieById = new Map<
+      NonNullable<(typeof watchlistMovies)[number]>["_id"],
+      NonNullable<(typeof watchlistMovies)[number]>
+    >();
+    for (const m of watchlistMovies) {
+      if (m) movieById.set(m._id, m);
+    }
+    const userById = new Map<
+      NonNullable<(typeof watchlistUsers)[number]>["_id"],
+      NonNullable<(typeof watchlistUsers)[number]>
+    >();
+    for (const u of watchlistUsers) {
+      if (u) userById.set(u._id, u);
+    }
+
     for (const entry of watchlist) {
-      const [movie, user] = await Promise.all([
-        ctx.db.get(entry.movieId),
-        ctx.db.get(entry.addedBy),
-      ]);
+      const movie = movieById.get(entry.movieId);
       if (!movie) continue;
+      const user = userById.get(entry.addedBy);
       items.push({
         id: `wl-${entry._id}`,
         type: "watchlist_add",
@@ -80,8 +103,38 @@ export const getRecentActivity = query({
       });
     }
 
+    const watchedMovieIds = [
+      ...new Set(watched.map((entry) => entry.movieId)),
+    ];
+    const ratingNoteUserIds = new Set<
+      (typeof watched)[number]["ratings"][number]["userId"]
+    >();
     for (const entry of watched) {
-      const movie = await ctx.db.get(entry.movieId);
+      for (const r of entry.ratings) {
+        if (r.note) ratingNoteUserIds.add(r.userId);
+      }
+    }
+    const [watchedMovies, ratingNoteUsers] = await Promise.all([
+      Promise.all(watchedMovieIds.map((id) => ctx.db.get(id))),
+      Promise.all([...ratingNoteUserIds].map((id) => ctx.db.get(id))),
+    ]);
+    const watchedMovieById = new Map<
+      NonNullable<(typeof watchedMovies)[number]>["_id"],
+      NonNullable<(typeof watchedMovies)[number]>
+    >();
+    for (const m of watchedMovies) {
+      if (m) watchedMovieById.set(m._id, m);
+    }
+    const ratingUserById = new Map<
+      NonNullable<(typeof ratingNoteUsers)[number]>["_id"],
+      NonNullable<(typeof ratingNoteUsers)[number]>
+    >();
+    for (const u of ratingNoteUsers) {
+      if (u) ratingUserById.set(u._id, u);
+    }
+
+    for (const entry of watched) {
+      const movie = watchedMovieById.get(entry.movieId);
       if (!movie) continue;
       items.push({
         id: `w-${entry._id}`,
@@ -95,7 +148,7 @@ export const getRecentActivity = query({
 
       for (const r of entry.ratings) {
         if (!r.note) continue;
-        const user = await ctx.db.get(r.userId);
+        const user = ratingUserById.get(r.userId);
         items.push({
           id: `r-${entry._id}-${r.userId}`,
           type: "rating",
