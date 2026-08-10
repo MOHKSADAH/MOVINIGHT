@@ -4,6 +4,7 @@
   "newCollection": "New Collection",
   "createDialogTitle": "New Collection",
   "namePlaceholder": "Horror Night, 90s Classics...",
+  "nameRequired": "Enter a collection name.",
   "descriptionOptional": "Description (optional)",
   "descriptionPlaceholder": "What's this collection about?",
   "toastCreated": "Collection created",

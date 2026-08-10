@@ -7,9 +7,18 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export default function OrgSettingsPage() {
   const t = useTranslations("org");
@@ -32,6 +41,7 @@ export default function OrgSettingsPage() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string>();
 
   if (active === undefined) {
     return (
@@ -84,6 +94,7 @@ export default function OrgSettingsPage() {
           {isOwner && (
             <form
               className="flex flex-wrap gap-2"
+              noValidate
               onSubmit={(e) => {
                 e.preventDefault();
                 void (async () => {
@@ -133,14 +144,25 @@ export default function OrgSettingsPage() {
           <section className="space-y-3">
             <h2 className="font-medium">{t("inviteEmail")}</h2>
             <form
-              className="flex flex-wrap gap-2"
+              className="space-y-2"
+              noValidate
               onSubmit={(e) => {
                 e.preventDefault();
+                const trimmed = email.trim();
+                if (!trimmed) {
+                  setEmailError(t("inviteEmailRequired"));
+                  return;
+                }
+                if (!isValidEmail(trimmed)) {
+                  setEmailError(t("inviteEmailInvalid"));
+                  return;
+                }
+                setEmailError(undefined);
                 void (async () => {
                   try {
                     await createInvite({
                       orgId: active._id,
-                      email: email.trim(),
+                      email: trimmed,
                     });
                     toast.success(t("inviteSent"));
                     setEmail("");
@@ -152,21 +174,32 @@ export default function OrgSettingsPage() {
                 })();
               }}
             >
-              <Label className="sr-only" htmlFor="invite-email">
-                {t("inviteEmail")}
-              </Label>
-              <Input
-                id="invite-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("inviteEmailPlaceholder")}
-                className="max-w-sm"
-                required
-              />
-              <Button type="submit" size="sm">
-                {t("sendInvite")}
-              </Button>
+              <FieldGroup className="gap-2 sm:flex-row sm:items-start">
+                <Field
+                  className="min-w-0 flex-1"
+                  data-invalid={emailError ? true : undefined}
+                >
+                  <FieldLabel className="sr-only" htmlFor="invite-email">
+                    {t("inviteEmail")}
+                  </FieldLabel>
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError(undefined);
+                    }}
+                    placeholder={t("inviteEmailPlaceholder")}
+                    className="max-w-sm"
+                    aria-invalid={emailError ? true : undefined}
+                  />
+                  <FieldError>{emailError}</FieldError>
+                </Field>
+                <Button type="submit" size="sm" className="shrink-0">
+                  {t("sendInvite")}
+                </Button>
+              </FieldGroup>
             </form>
             <ul className="space-y-2 text-sm">
               {invites === undefined && <Skeleton className="h-8 w-full" />}

@@ -38,7 +38,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "@/i18n/navigation";
-import { AvatarPicker } from "@/components/avatar-picker";
+import { AvatarPicker, applyAvatarSelection, type AvatarSelection } from "@/components/avatar-picker";
 import { getDateFnsLocale, getLocalizedMovieTitle } from "@/lib/locale";
 
 export default function ProfilePage() {
@@ -59,6 +59,10 @@ export default function ProfilePage() {
   const watchlist = useQuery(api.watchlist.getWatchlist);
   const updateUser = useMutation(api.users.updateUser);
   const deleteAccount = useMutation(api.users.deleteAccount);
+  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const setUploadedAvatar = useMutation(api.users.setUploadedAvatar);
+  const setPresetAvatar = useMutation(api.users.setPresetAvatar);
+  const clearAvatar = useMutation(api.users.clearAvatar);
 
   const isOwnProfile = currentUser?._id === userId;
   const viewerIsAppOwner = currentUser?.isOwner === true;
@@ -70,6 +74,9 @@ export default function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [avatarSelection, setAvatarSelection] = useState<AvatarSelection>({
+    kind: "keep",
+  });
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -77,20 +84,32 @@ export default function ProfilePage() {
   const handleOpenEdit = () => {
     setEditName(profileUser?.name ?? "");
     setEditBio((profileUser as { bio?: string } | null | undefined)?.bio ?? "");
+    setAvatarSelection({ kind: "keep" });
     setEditOpen(true);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      await applyAvatarSelection(avatarSelection, {
+        generateUploadUrl,
+        setUploadedAvatar,
+        setPresetAvatar,
+        clearAvatar,
+      });
       await updateUser({
         name: editName.trim() || undefined,
         bio: editBio.trim() || undefined,
       });
       toast.success(t("toastProfileUpdated"));
       setEditOpen(false);
-    } catch {
-      toast.error(t("toastProfileFailed"));
+      setAvatarSelection({ kind: "keep" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : t("toastProfileFailed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -442,7 +461,10 @@ export default function ProfilePage() {
           <div className="space-y-6 px-6 py-6">
             <AvatarPicker
               currentAvatar={avatarSrc}
+              selection={avatarSelection}
+              onSelectionChange={setAvatarSelection}
               fallbackInitial={editName?.[0]?.toUpperCase()}
+              disabled={saving}
             />
 
             <Separator />
