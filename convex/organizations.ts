@@ -91,7 +91,7 @@ export const needsOrgGate = query({
     const user = await requireActiveUser(ctx);
     return {
       needsTerms: !hasAcceptedCurrentTerms(user),
-      // Explicit create / join / invite only — seeded weebs membership is not enough.
+      // Create / join / invite / restored legacy Weebs set this timestamp.
       needsOrg: user.orgSetupCompletedAt === undefined,
       needsOnboarding: !user.name?.trim(),
     };

@@ -6,7 +6,7 @@
   "orgName": "Organization name",
   "orgNamePlaceholder": "Friday Film Club",
   "orgCode": "Join code",
-  "orgCodePlaceholder": "weebs",
+  "orgCodePlaceholder": "my-crew",
   "orgCodeHint": "3–32 characters. Letters, numbers, underscore, hyphen.",
   "createSubmit": "Create organization",
   "joinSubmit": "Join organization",

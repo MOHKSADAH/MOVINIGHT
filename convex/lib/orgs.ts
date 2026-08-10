@@ -3,7 +3,10 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
-/** Seeded weebs rows do not count until the user joins with the code (or invite). */
+/**
+ * Memberships that grant org access. `"seed"` is excluded (use `"legacy"` for
+ * original Weebs crew). Missing source is treated as effective for older rows.
+ */
 export function isEffectiveMembership(
   membership: Doc<"organizationMembers">,
 ): boolean {

@@ -9,54 +9,55 @@ import {
 import { isAppOwner, requireAppOwner } from "./lib/users";
 import {
   findOrgByCode,
-  isEffectiveMembership,
-  listEffectiveMembershipsForUser,
 } from "./lib/orgs";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 export const migrations = new Migrations(components.migrations);
 
-/** Mark weebs migration rows as seed and point activeOrg away from them. */
-async function demoteSeedWeebsMemberships(
+/** Restore original Weebs members to full access (no code re-entry required). */
+async function restoreLegacyWeebsMemberships(
   ctx: MutationCtx,
   orgId: Id<"organizations">,
-): Promise<{ markedSeed: number; activeOrgFixed: number }> {
+): Promise<{ restoredLegacy: number; orgSetupFixed: number }> {
   const memberships = await ctx.db
     .query("organizationMembers")
     .withIndex("by_org", (q) => q.eq("orgId", orgId))
     .collect();
 
-  let markedSeed = 0;
-  let activeOrgFixed = 0;
+  const now = Date.now();
+  let restoredLegacy = 0;
+  let orgSetupFixed = 0;
 
   for (const membership of memberships) {
-    // Legacy rows have no source; treat them as seed until an explicit join.
-    if (membership.source === undefined) {
-      await ctx.db.patch(membership._id, { source: "seed" });
-      markedSeed += 1;
+    // Original crew rows were marked `seed` (or left without source). Promote them.
+    if (membership.source === "seed" || membership.source === undefined) {
+      await ctx.db.patch(membership._id, { source: "legacy" });
+      restoredLegacy += 1;
+    }
+
+    const user = await ctx.db.get(membership.userId);
+    if (!user || user.deletedAt !== undefined) continue;
+
+    const patch: {
+      activeOrgId?: Id<"organizations">;
+      orgSetupCompletedAt?: number;
+    } = {};
+
+    if (user.orgSetupCompletedAt === undefined) {
+      patch.orgSetupCompletedAt = now;
+      orgSetupFixed += 1;
+    }
+    if (user.activeOrgId === undefined) {
+      patch.activeOrgId = orgId;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(user._id, patch);
     }
   }
 
-  // Re-read after patches so active-org fix sees source: "seed".
-  const refreshed = await ctx.db
-    .query("organizationMembers")
-    .withIndex("by_org", (q) => q.eq("orgId", orgId))
-    .collect();
-
-  for (const membership of refreshed) {
-    if (isEffectiveMembership(membership)) continue;
-    const user = await ctx.db.get(membership.userId);
-    if (!user || user.activeOrgId !== orgId) continue;
-
-    const remaining = await listEffectiveMembershipsForUser(ctx, user._id);
-    await ctx.db.patch(user._id, {
-      activeOrgId: remaining[0]?.orgId,
-    });
-    activeOrgFixed += 1;
-  }
-
-  return { markedSeed, activeOrgFixed };
+  return { restoredLegacy, orgSetupFixed };
 }
 
 async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
@@ -82,9 +83,10 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
 
   const orgId = org._id;
   let membersAdded = 0;
+  const now = Date.now();
 
-  // Only auto-add memberships the first time weebs is created. Later runs must
-  // not silently enroll new signups — they have to join/create explicitly.
+  // Only auto-add memberships the first time weebs is created. Those users are
+  // the original crew (`legacy`). Later runs must not enroll new signups.
   if (createdOrg) {
     for (const user of activeUsers) {
       const existing = await ctx.db
@@ -98,12 +100,18 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
           orgId,
           userId: user._id,
           role: isAppOwner(user.email) ? "owner" : "member",
-          joinedAt: Date.now(),
-          source: "seed",
+          joinedAt: now,
+          source: "legacy",
         });
         membersAdded += 1;
       }
-      // Do not set activeOrgId — seed membership is not usable until join-by-code.
+
+      await ctx.db.patch(user._id, {
+        ...(user.activeOrgId === undefined ? { activeOrgId: orgId } : {}),
+        ...(user.orgSetupCompletedAt === undefined
+          ? { orgSetupCompletedAt: now }
+          : {}),
+      });
     }
   } else {
     for (const user of activeUsers) {
@@ -119,7 +127,7 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
     }
   }
 
-  const demoted = await demoteSeedWeebsMemberships(ctx, orgId);
+  const restored = await restoreLegacyWeebsMemberships(ctx, orgId);
 
   const patched = {
     watchlist: 0,
@@ -163,8 +171,8 @@ async function seedWeebsAndBackfillHandler(ctx: MutationCtx) {
   return {
     orgId,
     membersAdded,
-    markedSeed: demoted.markedSeed,
-    activeOrgFixed: demoted.activeOrgFixed,
+    restoredLegacy: restored.restoredLegacy,
+    orgSetupFixed: restored.orgSetupFixed,
     patched,
   };
 }
@@ -175,8 +183,8 @@ export const seedWeebsAndBackfill = internalMutation({
   returns: v.object({
     orgId: v.id("organizations"),
     membersAdded: v.number(),
-    markedSeed: v.number(),
-    activeOrgFixed: v.number(),
+    restoredLegacy: v.number(),
+    orgSetupFixed: v.number(),
     patched: v.object({
       watchlist: v.number(),
       nights: v.number(),
@@ -194,8 +202,8 @@ export const runBootstrap = mutation({
   returns: v.object({
     orgId: v.id("organizations"),
     membersAdded: v.number(),
-    markedSeed: v.number(),
-    activeOrgFixed: v.number(),
+    restoredLegacy: v.number(),
+    orgSetupFixed: v.number(),
     patched: v.object({
       watchlist: v.number(),
       nights: v.number(),

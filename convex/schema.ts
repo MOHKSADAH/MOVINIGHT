@@ -5,6 +5,9 @@ import { authTables } from "@convex-dev/auth/server";
 const orgRole = v.union(v.literal("owner"), v.literal("member"));
 
 const membershipSource = v.union(
+  /** Original Weebs crew from pre-org migration — full access, no code re-entry. */
+  v.literal("legacy"),
+  /** Transient / incorrect auto-enroll; does not grant access. Prefer upgrading to legacy. */
   v.literal("seed"),
   v.literal("code"),
   v.literal("create"),
@@ -42,9 +45,8 @@ export default defineSchema({
     /** Currently selected organization for org-scoped queries. */
     activeOrgId: v.optional(v.id("organizations")),
     /**
-     * Set only when the user explicitly creates, joins by code, or accepts an
-     * invite. Seed/backfill membership alone does not count — they must still
-     * complete the join-org flow before using the app.
+     * Set when org setup is complete: create, join by code, accept invite, or
+     * restored legacy Weebs membership from the original crew migration.
      */
     orgSetupCompletedAt: v.optional(v.number()),
     termsAcceptedAt: v.optional(v.number()),
@@ -67,8 +69,10 @@ export default defineSchema({
     role: orgRole,
     joinedAt: v.number(),
     /**
-     * How the user joined. `"seed"` is migration-only and does not grant app
-     * access — they must join with the code (or invite) first.
+     * How the user joined.
+     * - `"legacy"`: original Weebs members from migration (full access)
+     * - `"seed"`: non-access placeholder (should be upgraded to legacy)
+     * - `"code"` / `"create"` / `"invite"`: explicit join paths
      */
     source: v.optional(membershipSource),
   })
