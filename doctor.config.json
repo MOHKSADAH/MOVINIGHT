@@ -1,0 +1,39 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "ignore": {
+    "files": ["convex/_generated/**"],
+    "overrides": [
+      {
+        "files": ["convex/**"],
+        "rules": ["deslop/unused-file"]
+      },
+      {
+        "files": ["convex/migrations.ts"],
+        "rules": [
+          "react-doctor/async-await-in-loop",
+          "react-doctor/server-sequential-independent-await"
+        ]
+      },
+      {
+        "files": ["components/ui/**"],
+        "rules": ["react-doctor/only-export-components"]
+      },
+      {
+        "files": ["app/**/*.tsx", "components/**/*.tsx"],
+        "rules": ["react-doctor/no-prevent-default"]
+      },
+      {
+        "files": [
+          "app/[locale]/join-org/page.tsx",
+          "app/[locale]/onboarding/page.tsx",
+          "components/app-shell.tsx"
+        ],
+        "rules": ["react-doctor/nextjs-no-client-side-redirect"]
+      },
+      {
+        "files": ["**/*.{ts,tsx}"],
+        "rules": ["react-doctor/no-giant-component"]
+      }
+    ]
+  }
+}
